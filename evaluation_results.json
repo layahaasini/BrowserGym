@@ -1,0 +1,183 @@
+{
+  "summary": {
+    "total_evaluations": 12,
+    "successful_evaluations": 10,
+    "overall_success_rate": 0.8333333333333334,
+    "average_score": 0.6930154232644617,
+    "average_execution_time": 14.314814550668942
+  },
+  "agent_performance": {
+    "GPT-4 Agent": {
+      "success_rate": 1.0,
+      "average_score": 0.8289184817750741,
+      "average_steps": 7.5,
+      "average_time": 13.543489815288051,
+      "total_evaluations": 4
+    },
+    "GPT-3.5 Agent": {
+      "success_rate": 0.75,
+      "average_score": 0.606526211712494,
+      "average_steps": 12.25,
+      "average_time": 14.689926576583325,
+      "total_evaluations": 4
+    },
+    "Custom Agent": {
+      "success_rate": 0.75,
+      "average_score": 0.6436015763058172,
+      "average_steps": 16.25,
+      "average_time": 14.711027260135445,
+      "total_evaluations": 4
+    }
+  },
+  "benchmark_performance": {
+    "miniwob.click-dialog": {
+      "success_rate": 0.6666666666666666,
+      "average_score": 0.7620797647249327,
+      "average_steps": 12.666666666666666,
+      "average_time": 17.597388080356144,
+      "total_evaluations": 3
+    },
+    "miniwob.choose-list": {
+      "success_rate": 0.6666666666666666,
+      "average_score": 0.6332829950735779,
+      "average_steps": 12.333333333333334,
+      "average_time": 14.94153978616371,
+      "total_evaluations": 3
+    },
+    "webarena.310": {
+      "success_rate": 1.0,
+      "average_score": 0.6087675978283476,
+      "average_steps": 11.666666666666666,
+      "average_time": 9.984885547667,
+      "total_evaluations": 3
+    },
+    "webarena.4": {
+      "success_rate": 1.0,
+      "average_score": 0.7679313354309887,
+      "average_steps": 11.333333333333334,
+      "average_time": 14.73544478848891,
+      "total_evaluations": 3
+    }
+  },
+  "leaderboard": [
+    {
+      "agent_name": "GPT-4 Agent",
+      "composite_score": 0.7453192502449221,
+      "success_rate": 1.0,
+      "average_score": 0.8289184817750741,
+      "average_time": 13.543489815288051
+    },
+    {
+      "agent_name": "Custom Agent",
+      "composite_score": 0.5701705428755104,
+      "success_rate": 0.75,
+      "average_score": 0.6436015763058172,
+      "average_time": 14.711027260135445
+    },
+    {
+      "agent_name": "GPT-3.5 Agent",
+      "composite_score": 0.5553575169304189,
+      "success_rate": 0.75,
+      "average_score": 0.606526211712494,
+      "average_time": 14.689926576583325
+    }
+  ],
+  "detailed_results": [
+    {
+      "agent_name": "GPT-4 Agent",
+      "benchmark": "miniwob.click-dialog",
+      "success": true,
+      "score": 0.7916671275820975,
+      "steps_taken": 9,
+      "execution_time": 18.01948218361972
+    },
+    {
+      "agent_name": "GPT-4 Agent",
+      "benchmark": "miniwob.choose-list",
+      "success": true,
+      "score": 0.8872142422239118,
+      "steps_taken": 6,
+      "execution_time": 5.375871450854433
+    },
+    {
+      "agent_name": "GPT-4 Agent",
+      "benchmark": "webarena.310",
+      "success": true,
+      "score": 0.6875137333847159,
+      "steps_taken": 8,
+      "execution_time": 11.574615955948584
+    },
+    {
+      "agent_name": "GPT-4 Agent",
+      "benchmark": "webarena.4",
+      "success": true,
+      "score": 0.9492788239095713,
+      "steps_taken": 7,
+      "execution_time": 19.203989670729467
+    },
+    {
+      "agent_name": "GPT-3.5 Agent",
+      "benchmark": "miniwob.click-dialog",
+      "success": false,
+      "score": 0.7963654895982518,
+      "steps_taken": 13,
+      "execution_time": 21.568095202002592
+    },
+    {
+      "agent_name": "GPT-3.5 Agent",
+      "benchmark": "miniwob.choose-list",
+      "success": true,
+      "score": 0.5919118319315549,
+      "steps_taken": 14,
+      "execution_time": 14.921767372282648
+    },
+    {
+      "agent_name": "GPT-3.5 Agent",
+      "benchmark": "webarena.310",
+      "success": true,
+      "score": 0.4873917484884691,
+      "steps_taken": 13,
+      "execution_time": 8.213034594370365
+    },
+    {
+      "agent_name": "GPT-3.5 Agent",
+      "benchmark": "webarena.4",
+      "success": true,
+      "score": 0.5504357768317001,
+      "steps_taken": 9,
+      "execution_time": 14.056809137677696
+    },
+    {
+      "agent_name": "Custom Agent",
+      "benchmark": "miniwob.click-dialog",
+      "success": true,
+      "score": 0.6982066769944489,
+      "steps_taken": 16,
+      "execution_time": 13.204586855446115
+    },
+    {
+      "agent_name": "Custom Agent",
+      "benchmark": "miniwob.choose-list",
+      "success": false,
+      "score": 0.42072291106526705,
+      "steps_taken": 17,
+      "execution_time": 24.526980535354053
+    },
+    {
+      "agent_name": "Custom Agent",
+      "benchmark": "webarena.310",
+      "success": true,
+      "score": 0.6513973116118577,
+      "steps_taken": 14,
+      "execution_time": 10.167006092682048
+    },
+    {
+      "agent_name": "Custom Agent",
+      "benchmark": "webarena.4",
+      "success": true,
+      "score": 0.8040794055516947,
+      "steps_taken": 18,
+      "execution_time": 10.945535557059568
+    }
+  ]
+}
