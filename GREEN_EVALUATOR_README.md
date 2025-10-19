@@ -78,29 +78,6 @@ The evaluator can test agents on these MiniWoB tasks:
 - `miniwob.book-flight` - Book flights
 - `miniwob.buy-ticket` - Purchase tickets
 
-## 🧪 Example Usage
-
-```python
-from green_evaluator import GreenEvaluator
-
-# Initialize evaluator
-evaluator = GreenEvaluator(results_dir="./my_evaluation")
-
-# Load an agent
-agent = evaluator.load_agent("demo_agent/agent.py")
-
-# Test single task
-result = evaluator.evaluate_agent_on_task(agent, "miniwob.click-dialog")
-print(f"Success: {result['success']}, Steps: {result['steps_taken']}")
-
-# Test multiple tasks
-results = evaluator.evaluate_agent_on_benchmark_suite(
-    agent, 
-    ["miniwob.click-dialog", "miniwob.choose-list"]
-)
-print(f"Success rate: {results['success_rate']:.2%}")
-```
-
 ## Requirements
 
 - BrowserGym installed and configured
