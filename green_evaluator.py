@@ -65,7 +65,7 @@ class GreenEvaluator:
             "task_results": []
         }
         
-        self.logger.info("🟢 Green Evaluator initialized")
+        self.logger.info("Green Evaluator initialized")
     
     def _setup_logging(self) -> logging.Logger:
         """Set up logging for the evaluator."""
@@ -109,7 +109,7 @@ class GreenEvaluator:
                 break
         
         if env_file:
-            self.logger.info(f"📁 Loading environment variables from: {env_file}")
+            self.logger.info(f"Loading environment variables from: {env_file}")
             try:
                 # Load environment variables from .env file
                 with open(env_file, 'r') as f:
@@ -124,19 +124,19 @@ class GreenEvaluator:
                 
                 # Verify critical environment variables
                 if os.getenv('MINIWOB_URL'):
-                    self.logger.info(f"✅ MINIWOB_URL loaded: {os.getenv('MINIWOB_URL')}")
+                    self.logger.info(f"MINIWOB_URL loaded: {os.getenv('MINIWOB_URL')}")
                 else:
-                    self.logger.warning("⚠️ MINIWOB_URL not found in .env file")
+                    self.logger.warning("MINIWOB_URL not found in .env file")
                 
                 if os.getenv('OPENAI_API_KEY'):
-                    self.logger.info("✅ OPENAI_API_KEY loaded")
+                    self.logger.info("OPENAI_API_KEY loaded")
                 else:
-                    self.logger.warning("⚠️ OPENAI_API_KEY not found in .env file")
+                    self.logger.warning("OPENAI_API_KEY not found in .env file")
                     
             except Exception as e:
-                self.logger.error(f"❌ Failed to load .env file: {e}")
+                self.logger.error(f"Failed to load .env file: {e}")
         else:
-            self.logger.warning("⚠️ No .env file found. Make sure to set MINIWOB_URL and OPENAI_API_KEY manually")
+            self.logger.warning("No .env file found. Make sure to set MINIWOB_URL and OPENAI_API_KEY manually")
     
     def load_agent(self, agent_path: str) -> Agent:
         """
@@ -148,7 +148,7 @@ class GreenEvaluator:
         Returns:
             Loaded agent instance
         """
-        self.logger.info(f"📁 Loading agent from: {agent_path}")
+        self.logger.info(f"Loading agent from: {agent_path}")
         
         try:
             # Load the agent module
@@ -169,7 +169,7 @@ class GreenEvaluator:
             
             # Use the first agent class found (assuming it's the main one)
             agent_class = agent_classes[0]
-            self.logger.info(f"✅ Found agent class: {agent_class.__name__}")
+            self.logger.info(f"Found agent class: {agent_class.__name__}")
             
             # Try to create agent instance with default parameters
             # This is a simplified approach - in practice, you'd need to handle
@@ -197,19 +197,19 @@ class GreenEvaluator:
                             params[param_name] = defaults[param_name]
                     
                     agent = agent_class(**params)
-                    self.logger.info(f"✅ Created agent instance with parameters: {params}")
+                    self.logger.info(f"Created agent instance with parameters: {params}")
                     return agent
                 else:
                     agent = agent_class()
-                    self.logger.info("✅ Created agent instance with no parameters")
+                    self.logger.info("Created agent instance with no parameters")
                     return agent
                     
             except Exception as e:
-                self.logger.error(f"❌ Failed to create agent instance: {e}")
+                self.logger.error(f"Failed to create agent instance: {e}")
                 raise
                 
         except Exception as e:
-            self.logger.error(f"❌ Failed to load agent from {agent_path}: {e}")
+            self.logger.error(f"Failed to load agent from {agent_path}: {e}")
             raise
     
     def evaluate_agent_on_task(self, agent: Agent, task_name: str, max_steps: int = 50) -> Dict[str, Any]:
@@ -224,7 +224,7 @@ class GreenEvaluator:
         Returns:
             Dictionary containing evaluation results
         """
-        self.logger.info(f"🎯 Evaluating agent on task: {task_name}")
+        self.logger.info(f"Evaluating agent on task: {task_name}")
         
         # Set up environment arguments for the benchmark task
         env_args = EnvArgs(
@@ -250,7 +250,7 @@ class GreenEvaluator:
         
         try:
             # Run the evaluation
-            self.logger.info(f"🚀 Starting evaluation in: {exp_dir}")
+            self.logger.info(f"Starting evaluation in: {exp_dir}")
             
             # Prepare the experiment
             exp_args.prepare(str(self.results_dir))
@@ -277,7 +277,7 @@ class GreenEvaluator:
                     action, agent_info = agent.get_action(obs.copy())
                     
                     if action is None:
-                        self.logger.info("🛑 Agent returned None action, ending evaluation")
+                        self.logger.info("Agent returned None action, ending evaluation")
                         break
                     
                     # Execute action in environment
@@ -292,14 +292,14 @@ class GreenEvaluator:
                     # Check if task is complete
                     if terminated:
                         success = True
-                        self.logger.info(f"✅ Task completed successfully in {step_count} steps")
+                        self.logger.info(f"Task completed successfully in {step_count} steps")
                         break
                     elif truncated:
-                        self.logger.info(f"⏰ Task truncated after {step_count} steps")
+                        self.logger.info(f"Task truncated after {step_count} steps")
                         break
                         
                 except Exception as e:
-                    self.logger.error(f"❌ Error during evaluation: {e}")
+                    self.logger.error(f"Error during evaluation: {e}")
                     break
             
             # Close environment
@@ -316,11 +316,11 @@ class GreenEvaluator:
                 "timestamp": timestamp
             }
             
-            self.logger.info(f"📊 Evaluation complete: {result}")
+            self.logger.info(f"Evaluation complete: {result}")
             return result
             
         except Exception as e:
-            self.logger.error(f"❌ Evaluation failed: {e}")
+            self.logger.error(f"Evaluation failed: {e}")
             return {
                 "task_name": task_name,
                 "success": False,
@@ -343,7 +343,7 @@ class GreenEvaluator:
         Returns:
             Dictionary containing comprehensive evaluation results
         """
-        self.logger.info(f"🎯 Starting benchmark suite evaluation with {len(task_list)} tasks")
+        self.logger.info(f"Starting benchmark suite evaluation with {len(task_list)} tasks")
         
         results = []
         successful_tasks = 0
@@ -351,7 +351,7 @@ class GreenEvaluator:
         total_reward = 0
         
         for i, task_name in enumerate(task_list, 1):
-            self.logger.info(f"📋 Task {i}/{len(task_list)}: {task_name}")
+            self.logger.info(f"Task {i}/{len(task_list)}: {task_name}")
             
             # Evaluate on this task
             result = self.evaluate_agent_on_task(agent, task_name)
@@ -384,11 +384,11 @@ class GreenEvaluator:
         with open(results_file, 'w') as f:
             json.dump(final_results, f, indent=2)
         
-        self.logger.info(f"📊 Benchmark evaluation complete!")
-        self.logger.info(f"✅ Success rate: {final_results['success_rate']:.2%}")
-        self.logger.info(f"📈 Average steps: {final_results['average_steps']:.1f}")
-        self.logger.info(f"🏆 Average reward: {final_results['average_reward']:.2f}")
-        self.logger.info(f"💾 Results saved to: {results_file}")
+        self.logger.info(f"Benchmark evaluation complete!")
+        self.logger.info(f"Success rate: {final_results['success_rate']:.2%}")
+        self.logger.info(f"Average steps: {final_results['average_steps']:.1f}")
+        self.logger.info(f"Average reward: {final_results['average_reward']:.2f}")
+        self.logger.info(f"Results saved to: {results_file}")
         
         return final_results
 
@@ -453,12 +453,12 @@ def main():
     
     # Check if required environment variables are set
     if not os.getenv('MINIWOB_URL'):
-        evaluator.logger.error("❌ MINIWOB_URL environment variable not set!")
+        evaluator.logger.error("MINIWOB_URL environment variable not set!")
         evaluator.logger.error("Please run: source .env")
         sys.exit(1)
     
     if not os.getenv('OPENAI_API_KEY'):
-        evaluator.logger.error("❌ OPENAI_API_KEY environment variable not set!")
+        evaluator.logger.error("OPENAI_API_KEY environment variable not set!")
         evaluator.logger.error("Please set your OpenAI API key: export OPENAI_API_KEY='your-key-here'")
         sys.exit(1)
     
@@ -468,9 +468,9 @@ def main():
         
         if args.task:
             # Evaluate on single task
-            evaluator.logger.info(f"🎯 Single task evaluation: {args.task}")
+            evaluator.logger.info(f"Single task evaluation: {args.task}")
             result = evaluator.evaluate_agent_on_task(agent, args.task, args.max_steps)
-            print(f"\n📊 Single Task Results:")
+            print(f"\nSingle Task Results:")
             print(f"Task: {result['task_name']}")
             print(f"Success: {result['success']}")
             print(f"Steps: {result['steps_taken']}")
@@ -478,11 +478,11 @@ def main():
             
         else:
             # Evaluate on full benchmark suite
-            evaluator.logger.info("🎯 Full benchmark suite evaluation")
+            evaluator.logger.info("Full benchmark suite evaluation")
             task_list = get_miniwob_task_list()
             results = evaluator.evaluate_agent_on_benchmark_suite(agent, task_list)
             
-            print(f"\n📊 Benchmark Suite Results:")
+            print(f"\nBenchmark Suite Results:")
             print(f"Agent: {results['agent_evaluated']}")
             print(f"Success Rate: {results['success_rate']:.2%}")
             print(f"Average Steps: {results['average_steps']:.1f}")
@@ -490,7 +490,7 @@ def main():
             print(f"Successful Tasks: {results['successful_tasks']}/{results['total_tasks']}")
     
     except Exception as e:
-        evaluator.logger.error(f"❌ Evaluation failed: {e}")
+        evaluator.logger.error(f"Evaluation failed: {e}")
         sys.exit(1)
 
 
