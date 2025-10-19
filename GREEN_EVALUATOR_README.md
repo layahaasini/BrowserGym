@@ -77,7 +77,10 @@ The evaluator can test agents on these MiniWoB tasks:
 
   ## Evaluating the Evaluator
 
-- Our next steps for this project heavily emphasize formulating more rigorous and thorough test cases. For now, since we are still in early stages of building our green agent (and it doesn't have many functionalities to test yet), we have been relying on **compilation** checks, checks for **reproductability**, as well as validating that **metrics** calculated from manually running the MiniWoB task are the same as those calculated by the green agent.
+- Our next steps for this project heavily emphasize formulating more rigorous and thorough test cases. For now, since we are still in early stages of building our green agent (and it doesn't have many functionalities to test yet), we have been relying on:
+- **Compilation**: Checking for compilation errors at any and all points
+- **Reproductability**: Ensuring that running the same file/commands multiple times results in the same output
+- **Metrics**: Verifying that metrics calculated from manually running the MiniWoB task are the same as those calculated by the green agent
 
 ## Requirements
 
