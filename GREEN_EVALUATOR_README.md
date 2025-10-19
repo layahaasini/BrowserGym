@@ -75,6 +75,16 @@ The evaluator can test agents on these MiniWoB tasks:
 - `miniwob.book-flight` - Book flights
 - `miniwob.buy-ticket` - Purchase tickets
 
+  ## Evaluating the Evaluator
+
+Our next steps for this project heavily emphasize formulating more rigorous and thorough test cases. For now, since we are still in early stages of building our green agent (and it doesn't have many functionalities to test yet), we have been relying on **compilation** checks, checks for **reproductability**, as well as validating that **metrics** calculated from manually running the MiniWoB task are the same as those calculated by the green agent.
+
+- **Success Rate**: How many tasks the agent completed successfully
+- **Efficiency**: Average number of steps taken per task
+- **Rewards**: Total and average rewards earned
+- **Task-by-Task Results**: Detailed results for each individual task
+- **Error Handling**: How the agent handles failures
+
 ## Requirements
 
 - BrowserGym installed and configured
