@@ -1,4 +1,4 @@
-# 🟢 Green Evaluator Agent | Browsergym MiniWoB Wrapper
+# Green Evaluator Agent | BrowserGym MiniWoB Wrapper
 
 An evaluator agent that acts as a wrapper for testing other web agents (white/demo agents) on BrowserGym benchmarks, specifically MiniWoB.
 
