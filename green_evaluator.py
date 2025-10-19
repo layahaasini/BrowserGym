@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-Green Evaluator Agent - A Benchmark Testing Framework
-====================================================
+Green Evaluator Agent
 
-This is a bare bones green evaluator agent that acts as a wrapper for testing
+Evaluator agent that acts as a wrapper for testing
 other web agents (white/demo agents) on BrowserGym benchmarks, specifically MiniWoB.
 
 The green evaluator:
