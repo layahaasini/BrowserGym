@@ -32,9 +32,6 @@ cd /Users/layahaasini/Desktop/projects/BrowserGym
 
 # Set your OpenAI API key (required)
 export OPENAI_API_KEY="your-api-key-here"
-
-# Note: our Green Evaluator automatically loads MINIWOB_URL from .env file
-# If you need to load it manually: source .env
 ```
 
 ### 2. Test Single Task
