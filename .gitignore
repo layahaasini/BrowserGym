@@ -157,4 +157,4 @@ miniwob-plusplus/
 uv.lock
 
 # venv
-/gym/
+/.gym/
