@@ -155,3 +155,6 @@ bg_wl_data/
 miniwob-plusplus/
 
 uv.lock
+
+# venv
+/.gym/

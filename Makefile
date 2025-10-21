@@ -8,9 +8,8 @@ install-demo:
 	pip install -r demo_agent/requirements.txt
 	playwright install chromium
 
-demo:
-	@echo "--- 🚀 Running demo agent ---"
-	(set -x && cd demo_agent && python run_demo.py)
+install-test:
+	pip install pytest pytest-xdist
 
 setup-miniwob:
 	@echo "--- 🤖 Setting up MiniWoB++ ---"
@@ -27,6 +26,25 @@ setup-miniwob:
 	@echo "✅ MiniWoB++ setup complete!"
 	@echo "💡 To use MiniWoB++, load the environment variables:"
 	@echo "   source .env"
+
+demo:
+	@echo "--- 🚀 Running open ended demo agent ---"
+	(set -x && cd demo_agent && python run_demo.py)
+
+# ex: make demo-tasks TASKS="miniwob.click-dialog miniwob.click-test miniwob.choose-date"
+demo-tasks:
+	@echo "--- 🚀 Running demo agent with tasks ---"
+	@cd demo_agent && \
+	for TASK in $(TASKS); do \
+		BENCHMARK=$$(echo $$TASK | cut -d. -f1); \
+		[ "$$BENCHMARK" = "miniwob" ] && export MINIWOB_URL="file://$(shell pwd)/miniwob-plusplus/miniwob/html/miniwob/"; \
+		[ "$$BENCHMARK" = "webarena" ] && export WEB_ARENA_DATA_DIR="$(shell pwd)/../bg_wl_data"; \
+		[ "$$BENCHMARK" = "visualwebarena" ] && export DATASET=visualwebarena && export VWA_CLASSIFIEDS="http://localhost:9980" && export VWA_CLASSIFIEDS_RESET_TOKEN="4b61655535e7ed388f0d40a93600254c" && \
+			export VWA_SHOPPING="http://localhost:7770" && export VWA_REDDIT="http://localhost:9999" && export VWA_WIKIPEDIA="http://localhost:8888" && export VWA_HOMEPAGE="http://localhost:4399"; \
+		[ "$$BENCHMARK" = "workarena" ] && export WORK_ARENA_INSTANCE_URL="$(shell pwd)/../workarena_env"; \
+		[ "$$BENCHMARK" = "weblinx" ] && export WEBLINX_DATA_DIR="$(shell pwd)/../bg_wl_data"; \
+		python run_demo.py --task $$TASK; \
+	done
 
 test-core:
 	@echo "--- 🧪 Running tests ---"
