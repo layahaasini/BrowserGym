@@ -158,3 +158,6 @@ uv.lock
 
 # venv
 /.gym/
+
+# environment export configurations
+secret_key.json

@@ -1,12 +1,32 @@
+export OPENAI_KEY := $(shell jq -r '.openai_key' secret_key.json)
+#  ssh -i ~/.ssh/id_ed25519 mischa@136.112.23.201
+
 install:
 	@echo "--- 🚀 Installing project dependencies ---"
-	pip install -e ./browsergym/core -e ./browsergym/miniwob -e ./browsergym/webarena -e ./browsergym/webarenalite -e ./browsergym/visualwebarena/ -e ./browsergym/experiments -e ./browsergym/assistantbench -e ./browsergym/
+	python3 -m venv .gym && . .gym/bin/activate && \
+	pip install -e ./browsergym/core -e ./browsergym/miniwob -e ./browsergym/webarena -e ./browsergym/webarenalite -e ./browsergym/visualwebarena/ -e ./browsergym/experiments -e ./browsergym/assistantbench -e ./browsergym/ openai
 	playwright install chromium
 
 install-demo:
 	@echo "--- 🚀 Installing demo dependencies ---"
 	pip install -r demo_agent/requirements.txt
 	playwright install chromium
+
+# brew install wget first
+install-agentbeats:
+	pip install git+https://github.com/agentbeats/agentbeats.git@main && pip install openai
+	@echo "Environment set up for AgentBeats."
+	wget -O red_agent_card.toml https://raw.githubusercontent.com/agentbeats/agentbeats/main/scenarios/templates/template_tensortrust_red_agent/red_agent_card.toml && \
+	sed -i '' 's/agent_url = "http:\/\/127.0.0.1:8000"/agent_url = "http:\/\/136.112.23.201:8000"/' red_agent_card.toml && \
+	sed -i '' 's/launcher_url = "http:\/\/127.0.0.1:8080"/launcher_url = "http:\/\/136.112.23.201:8080"/' red_agent_card.toml && \
+	sed -i '' 's/name = "TensorTrust"/name = "Benchwarmer Agent"/' red_agent_card.toml
+	@echo "Agent card downloaded and modified with our IP/port."
+	. .gym/bin/activate && agentbeats run red_agent_card.toml \
+		--launcher_host 136.112.23.201 \
+		--launcher_port 8080 \
+		--agent_host 136.112.23.201 \
+		--agent_port 8000
+	@echo "Running AgentBeats currently"
 
 install-test:
 	pip install pytest pytest-xdist
@@ -26,6 +46,12 @@ setup-miniwob:
 	@echo "✅ MiniWoB++ setup complete!"
 	@echo "💡 To use MiniWoB++, load the environment variables:"
 	@echo "   source .env"
+
+setup-agentbeat-battle:
+	curl -X POST https://agentbeats.org/battle/register \
+		-d "agent_url=http://136.112.23.201:8000" \
+		-d "battle_name=example_battle" && \
+	@echo "Battle registered."
 
 demo:
 	@echo "--- 🚀 Running open ended demo agent ---"
