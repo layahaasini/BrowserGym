@@ -108,6 +108,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.gym
 env/
 venv/
 ENV/
@@ -155,9 +156,6 @@ bg_wl_data/
 miniwob-plusplus/
 
 uv.lock
-
-# venv
-/.gym/
 
 # environment export configurations
 secret_key.json
