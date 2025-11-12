@@ -1,7 +1,6 @@
 OPENAI_API_KEY := $(shell jq -r '.openai_api_key' secret_key.json)
 export OPENAI_API_KEY
 
-# Virtual environment Python + Pip
 PY := .gym/bin/python
 PIP := .gym/bin/pip
 
