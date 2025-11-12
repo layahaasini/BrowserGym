@@ -11,8 +11,18 @@ The green evaluator:
 3. Evaluates their performance
 4. Generates evaluation reports
 
-Usage:
+Supports two modes:
+- Direct Import Mode: Loads agent Python files directly (for local testing)
+- A2A Mode: Communicates with agents via HTTP API (for AgentBeats platform)
+
+Usage (Direct Import):
     python3 green_evaluator.py --agent_path demo_agent/agent.py --task miniwob.click-dialog
+
+Usage (A2A Mode):
+    python3 green_evaluator.py --agent_url http://localhost:5002 --task miniwob.click-dialog
+
+Usage (Run as A2A Server):
+    python3 green_evaluator.py --server_mode --port 5001
 """
 
 import argparse
@@ -23,11 +33,102 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
+from abc import ABC, abstractmethod
 
 # BrowserGym imports
 from browsergym.experiments import EnvArgs, ExpArgs, get_exp_result
-from browsergym.experiments.agent import Agent
+from browsergym.experiments.agent import Agent, DEFAULT_ACTION_SET
+from browsergym.core.action.base import AbstractActionSet
+
+# A2A imports
+try:
+    from flask import Flask, request, jsonify
+    FLASK_AVAILABLE = True
+except ImportError:
+    FLASK_AVAILABLE = False
+    print("Warning: Flask not available. A2A server mode will not work.")
+
+from green_evaluator_a2a_client import A2AAgentClient
+import requests
+
+
+class AgentAdapter(ABC):
+    """
+    Adapter interface to make both direct Agent instances and A2A clients
+    work seamlessly with the evaluator.
+    """
+    
+    @abstractmethod
+    def get_action(self, obs: Any) -> tuple[str, Dict[str, Any]]:
+        """Get action from agent given observation."""
+        pass
+    
+    @abstractmethod
+    def obs_preprocessor(self, obs: dict) -> Any:
+        """Preprocess observation before sending to agent."""
+        pass
+    
+    @property
+    @abstractmethod
+    def action_set(self) -> AbstractActionSet:
+        """Get the agent's action set."""
+        pass
+
+
+class DirectAgentAdapter(AgentAdapter):
+    """Adapter for directly imported Agent instances."""
+    
+    def __init__(self, agent: Agent):
+        self.agent = agent
+    
+    def get_action(self, obs: Any) -> tuple[str, Dict[str, Any]]:
+        return self.agent.get_action(obs)
+    
+    def obs_preprocessor(self, obs: dict) -> Any:
+        return self.agent.obs_preprocessor(obs)
+    
+    @property
+    def action_set(self) -> AbstractActionSet:
+        return self.agent.action_set
+
+
+class A2AAgentAdapter(AgentAdapter):
+    """Adapter for A2A client connections."""
+    
+    def __init__(self, client: A2AAgentClient):
+        self.client = client
+        # We'll use default action set if we can't get it from agent
+        self._action_set = DEFAULT_ACTION_SET
+        # Try to get action set info
+        self._try_get_action_set_info()
+    
+    def _try_get_action_set_info(self):
+        """Try to get action set information from the agent."""
+        try:
+            action_set_info = self.client.get_action_set_info()
+            if action_set_info:
+                # For now, we'll use default action set
+                # In a full implementation, you'd reconstruct the action set from info
+                pass
+        except Exception as e:
+            logging.getLogger("A2AAgentAdapter").warning(
+                f"Could not get action set info: {e}"
+            )
+    
+    def get_action(self, obs: Any) -> tuple[str, Dict[str, Any]]:
+        # A2A clients expect the preprocessed observation
+        return self.client.get_action(obs)
+    
+    def obs_preprocessor(self, obs: dict) -> Any:
+        # For A2A, we'll do basic preprocessing here
+        # In practice, you might want to delegate to the agent's preprocessor via API
+        # For now, we'll do minimal preprocessing
+        return obs
+    
+    @property
+    def action_set(self) -> AbstractActionSet:
+        return self._action_set
 
 
 class GreenEvaluator:
@@ -138,15 +239,15 @@ class GreenEvaluator:
         else:
             self.logger.warning("No .env file found. Make sure to set MINIWOB_URL and OPENAI_API_KEY manually")
     
-    def load_agent(self, agent_path: str) -> Agent:
+    def load_agent(self, agent_path: str) -> AgentAdapter:
         """
-        Load an agent from a Python file.
+        Load an agent from a Python file (Direct Import Mode).
         
         Args:
             agent_path: Path to the agent Python file
             
         Returns:
-            Loaded agent instance
+            AgentAdapter wrapping the loaded agent
         """
         self.logger.info(f"Loading agent from: {agent_path}")
         
@@ -198,11 +299,11 @@ class GreenEvaluator:
                     
                     agent = agent_class(**params)
                     self.logger.info(f"Created agent instance with parameters: {params}")
-                    return agent
+                    return DirectAgentAdapter(agent)
                 else:
                     agent = agent_class()
                     self.logger.info("Created agent instance with no parameters")
-                    return agent
+                    return DirectAgentAdapter(agent)
                     
             except Exception as e:
                 self.logger.error(f"Failed to create agent instance: {e}")
@@ -212,7 +313,42 @@ class GreenEvaluator:
             self.logger.error(f"Failed to load agent from {agent_path}: {e}")
             raise
     
-    def evaluate_agent_on_task(self, agent: Agent, task_name: str, max_steps: int = 50) -> Dict[str, Any]:
+    def load_agent_a2a(self, agent_url: str) -> AgentAdapter:
+        """
+        Load an agent via A2A protocol (A2A Mode).
+        
+        Args:
+            agent_url: URL of the white agent (e.g., "http://localhost:5002")
+            
+        Returns:
+            AgentAdapter wrapping the A2A client
+        """
+        self.logger.info(f"Loading agent via A2A from: {agent_url}")
+        
+        try:
+            client = A2AAgentClient(agent_url)
+            
+            # Perform health check
+            if not client.health_check():
+                self.logger.error(f"Agent at {agent_url} failed health check")
+                self.logger.error(f"Make sure the white agent server is running.")
+                self.logger.error(f"Start it with: python3 example_white_agent_server.py --port {agent_url.split(':')[-1] if ':' in agent_url else '5002'}")
+                raise ValueError(f"Agent at {agent_url} failed health check. Is the white agent server running?")
+            
+            self.logger.info(f"Successfully connected to agent at {agent_url}")
+            return A2AAgentAdapter(client)
+            
+        except requests.exceptions.ConnectionError as e:
+            port = agent_url.split(':')[-1] if ':' in agent_url else '5002'
+            self.logger.error(f"Failed to connect to agent at {agent_url}")
+            self.logger.error(f"Connection refused - the white agent server is not running.")
+            self.logger.error(f"Start it with: python3 example_white_agent_server.py --port {port}")
+            raise ValueError(f"Could not connect to agent at {agent_url}. Start the white agent server first.")
+        except Exception as e:
+            self.logger.error(f"Failed to load agent via A2A from {agent_url}: {e}")
+            raise
+    
+    def evaluate_agent_on_task(self, agent: AgentAdapter, task_name: str, max_steps: int = 50) -> Dict[str, Any]:
         """
         Evaluate a single agent on a single benchmark task.
         
@@ -268,13 +404,13 @@ class GreenEvaluator:
             
             # Reset environment
             obs, env_info = env.reset()
-            obs = agent.obs_preprocessor(obs)
+            obs_preprocessed = agent.obs_preprocessor(obs)
             
             # Run the agent
             while step_count < max_steps:
                 try:
                     # Get agent's action
-                    action, agent_info = agent.get_action(obs.copy())
+                    action, agent_info = agent.get_action(obs_preprocessed.copy())
                     
                     if action is None:
                         self.logger.info("Agent returned None action, ending evaluation")
@@ -282,7 +418,7 @@ class GreenEvaluator:
                     
                     # Execute action in environment
                     obs, reward, terminated, truncated, env_info = env.step(action)
-                    obs = agent.obs_preprocessor(obs)
+                    obs_preprocessed = agent.obs_preprocessor(obs)
                     
                     total_reward += reward
                     step_count += 1
@@ -332,7 +468,7 @@ class GreenEvaluator:
                 "timestamp": timestamp
             }
     
-    def evaluate_agent_on_benchmark_suite(self, agent: Agent, task_list: List[str]) -> Dict[str, Any]:
+    def evaluate_agent_on_benchmark_suite(self, agent: AgentAdapter, task_list: List[str]) -> Dict[str, Any]:
         """
         Evaluate an agent on multiple benchmark tasks.
         
@@ -367,8 +503,9 @@ class GreenEvaluator:
             time.sleep(1)
         
         # Calculate final metrics
+        agent_name = "A2AAgent" if isinstance(agent, A2AAgentAdapter) else str(agent.agent.__class__.__name__)
         final_results = {
-            "agent_evaluated": str(agent.__class__.__name__),
+            "agent_evaluated": agent_name,
             "total_tasks": len(task_list),
             "successful_tasks": successful_tasks,
             "failed_tasks": len(task_list) - successful_tasks,
@@ -416,17 +553,188 @@ def get_miniwob_task_list() -> List[str]:
     ]
 
 
+def create_a2a_server(evaluator: GreenEvaluator, port: int = 5001):
+    """
+    Create and configure the Flask server for A2A protocol.
+    
+    Args:
+        evaluator: The GreenEvaluator instance
+        port: Port to run the server on
+    """
+    if not FLASK_AVAILABLE:
+        raise ImportError("Flask is required for A2A server mode. Install it with: pip install flask")
+    
+    app = Flask(__name__)
+    
+    # Store evaluator instance for use in routes
+    app.config['evaluator'] = evaluator
+    
+    @app.route('/health', methods=['GET'])
+    def health():
+        """Health check endpoint."""
+        return jsonify({
+            "status": "healthy",
+            "service": "GreenEvaluator",
+            "version": "1.0.0"
+        }), 200
+    
+    @app.route('/evaluate_task', methods=['POST'])
+    def evaluate_task():
+        """
+        A2A endpoint to evaluate an agent on a single task.
+        
+        Expected JSON payload:
+        {
+            "agent_url": "http://localhost:5002",  # URL of white agent (A2A mode)
+            "agent_path": "/path/to/agent.py",       # OR path to agent file (Direct mode)
+            "task_name": "miniwob.click-dialog",
+            "max_steps": 50,
+            "mode": "a2a"  # or "direct"
+        }
+        """
+        try:
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({"error": "No JSON data provided"}), 400
+            
+            task_name = data.get('task_name')
+            max_steps = data.get('max_steps', 50)
+            mode = data.get('mode', 'a2a')  # 'a2a' or 'direct'
+            agent_url = data.get('agent_url')
+            agent_path = data.get('agent_path')
+            
+            if not task_name:
+                return jsonify({"error": "task_name is required"}), 400
+            
+            evaluator = app.config['evaluator']
+            
+            # Load agent based on mode
+            if mode == 'a2a':
+                if not agent_url:
+                    return jsonify({"error": "agent_url is required for A2A mode"}), 400
+                agent = evaluator.load_agent_a2a(agent_url)
+            else:
+                if not agent_path:
+                    return jsonify({"error": "agent_path is required for direct mode"}), 400
+                agent = evaluator.load_agent(agent_path)
+            
+            # Run evaluation
+            result = evaluator.evaluate_agent_on_task(agent, task_name, max_steps)
+            
+            return jsonify(result), 200
+            
+        except Exception as e:
+            evaluator = app.config.get('evaluator')
+            if evaluator:
+                evaluator.logger.error(f"Error in /evaluate_task: {e}")
+            return jsonify({"error": str(e)}), 500
+    
+    @app.route('/evaluate_suite', methods=['POST'])
+    def evaluate_suite():
+        """
+        A2A endpoint to evaluate an agent on multiple tasks.
+        
+        Expected JSON payload:
+        {
+            "agent_url": "http://localhost:5002",
+            "agent_path": "/path/to/agent.py",
+            "task_list": ["miniwob.click-dialog", "miniwob.choose-list"],
+            "max_steps": 50,
+            "mode": "a2a"
+        }
+        """
+        try:
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({"error": "No JSON data provided"}), 400
+            
+            task_list = data.get('task_list')
+            max_steps = data.get('max_steps', 50)
+            mode = data.get('mode', 'a2a')
+            agent_url = data.get('agent_url')
+            agent_path = data.get('agent_path')
+            
+            if not task_list:
+                return jsonify({"error": "task_list is required"}), 400
+            
+            evaluator = app.config['evaluator']
+            
+            # Load agent based on mode
+            if mode == 'a2a':
+                if not agent_url:
+                    return jsonify({"error": "agent_url is required for A2A mode"}), 400
+                agent = evaluator.load_agent_a2a(agent_url)
+            else:
+                if not agent_path:
+                    return jsonify({"error": "agent_path is required for direct mode"}), 400
+                agent = evaluator.load_agent(agent_path)
+            
+            # Run evaluation
+            result = evaluator.evaluate_agent_on_benchmark_suite(agent, task_list)
+            
+            return jsonify(result), 200
+            
+        except Exception as e:
+            evaluator = app.config.get('evaluator')
+            if evaluator:
+                evaluator.logger.error(f"Error in /evaluate_suite: {e}")
+            return jsonify({"error": str(e)}), 500
+    
+    @app.route('/info', methods=['GET'])
+    def info():
+        """Get information about the Green Evaluator service."""
+        return jsonify({
+            "service": "GreenEvaluator",
+            "version": "1.0.0",
+            "modes": ["direct", "a2a"],
+            "endpoints": {
+                "health": "/health",
+                "evaluate_task": "/evaluate_task",
+                "evaluate_suite": "/evaluate_suite",
+                "info": "/info"
+            }
+        }), 200
+    
+    return app, port
+
+
 def main():
     """Main function to run the Green Evaluator."""
     parser = argparse.ArgumentParser(
         description="Green Evaluator - Test web agents on BrowserGym benchmarks"
     )
+    
+    # Mode selection
     parser.add_argument(
+        "--server_mode",
+        action="store_true",
+        help="Run as A2A server (for AgentBeats platform integration)"
+    )
+    
+    # Agent loading (mutually exclusive)
+    agent_group = parser.add_mutually_exclusive_group(required=False)
+    agent_group.add_argument(
         "--agent_path", 
         type=str, 
-        required=True,
-        help="Path to the agent Python file to evaluate"
+        help="Path to the agent Python file to evaluate (Direct Import Mode)"
     )
+    agent_group.add_argument(
+        "--agent_url",
+        type=str,
+        help="URL of the agent to evaluate (A2A Mode, e.g., 'http://localhost:5002')"
+    )
+    
+    # Server options
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=5001,
+        help="Port for A2A server (default: 5001)"
+    )
+    
+    # Evaluation options
     parser.add_argument(
         "--task", 
         type=str, 
@@ -457,14 +765,43 @@ def main():
         evaluator.logger.error("Please run: source .env")
         sys.exit(1)
     
+    # Note: OPENAI_API_KEY is only needed by the white agent, not the green evaluator
+    # We'll only warn, not fail, since the agent might handle its own API key
     if not os.getenv('OPENAI_API_KEY'):
-        evaluator.logger.error("OPENAI_API_KEY environment variable not set!")
-        evaluator.logger.error("Please set your OpenAI API key: export OPENAI_API_KEY='your-key-here'")
-        sys.exit(1)
+        evaluator.logger.warning("OPENAI_API_KEY environment variable not set!")
+        evaluator.logger.warning("This is needed if your white agent uses OpenAI. The green evaluator will continue.")
+        evaluator.logger.warning("If evaluation fails, set it with: export OPENAI_API_KEY='your-key-here'")
+    
+    # Server mode: Run as A2A server
+    if args.server_mode:
+        if not FLASK_AVAILABLE:
+            evaluator.logger.error("Flask is required for server mode. Install it with: pip install flask")
+            sys.exit(1)
+        
+        app, port = create_a2a_server(evaluator, args.port)
+        evaluator.logger.info(f"Starting Green Evaluator A2A server on port {port}")
+        evaluator.logger.info(f"Server endpoints:")
+        evaluator.logger.info(f"  - GET  /health")
+        evaluator.logger.info(f"  - POST /evaluate_task")
+        evaluator.logger.info(f"  - POST /evaluate_suite")
+        evaluator.logger.info(f"  - GET  /info")
+        app.run(host='0.0.0.0', port=port, debug=False)
+        return
+    
+    # Client mode: Run evaluation
+    if not args.agent_path and not args.agent_url:
+        parser.error("Either --agent_path or --agent_url must be provided (or use --server_mode)")
     
     try:
         # Load the agent to evaluate
-        agent = evaluator.load_agent(args.agent_path)
+        if args.agent_url:
+            # A2A Mode
+            evaluator.logger.info("Running in A2A Mode")
+            agent = evaluator.load_agent_a2a(args.agent_url)
+        else:
+            # Direct Import Mode
+            evaluator.logger.info("Running in Direct Import Mode")
+            agent = evaluator.load_agent(args.agent_path)
         
         if args.task:
             # Evaluate on single task
@@ -475,6 +812,8 @@ def main():
             print(f"Success: {result['success']}")
             print(f"Steps: {result['steps_taken']}")
             print(f"Reward: {result['total_reward']}")
+            print(f"\nFull JSON Result:")
+            print(json.dumps(result, indent=2))
             
         else:
             # Evaluate on full benchmark suite
@@ -488,9 +827,13 @@ def main():
             print(f"Average Steps: {results['average_steps']:.1f}")
             print(f"Average Reward: {results['average_reward']:.2f}")
             print(f"Successful Tasks: {results['successful_tasks']}/{results['total_tasks']}")
+            print(f"\nFull JSON Result:")
+            print(json.dumps(results, indent=2))
     
     except Exception as e:
         evaluator.logger.error(f"Evaluation failed: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
 
