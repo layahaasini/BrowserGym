@@ -7,7 +7,7 @@ PIP := $(shell pwd)/.gym/bin/pip
 install:
 	@echo "--- 🚀 Configuring environment and installing dependencies ---"
 	sudo apt-get update && \
-	sudo apt-get install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libatspi2.0-0 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango-1.0-0 libcairo2 libasound2
+	sudo apt-get install -y xvfb libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libatspi2.0-0 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango-1.0-0 libcairo2 libasound2
 	python3 -m venv .gym
 	@$(PIP) install --upgrade pip && $(PIP) install -r requirements.txt && $(PY) -m playwright install chromium
 	@if [ ! -d "miniwob-plusplus" ]; then \
@@ -48,7 +48,7 @@ demo:
 	fi; \
 	if [ -z "$(TASKS)" ]; then \
 		echo "No TASKS specified — 🚀 running open-ended demo agent"; \
-		$(PY) run_demo.py; \
+		xvfb-run -a $(PY) run_demo.py; \
 	else \
 		for TASK in $(TASKS); do \
 			echo "\n=== 🧠 Working on task: $$TASK ==="; \
@@ -62,7 +62,7 @@ demo:
 				export VWA_REDDIT="http://localhost:9999" && \
 				export VWA_WIKIPEDIA="http://localhost:8888" && \
 				export VWA_HOMEPAGE="http://localhost:4399"; \
-			$(PY) run_demo.py --task $$TASK; \
+			xvfb-run -a $(PY) run_demo.py --task $$TASK; \
 			echo "\n✅ Finished task: $$TASK"; \
 		done; \
 	fi
