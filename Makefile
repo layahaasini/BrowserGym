@@ -1,8 +1,8 @@
 OPENAI_API_KEY := $(shell jq -r '.openai_api_key' secret_key.json)
 export OPENAI_API_KEY
 
-PY := .gym/bin/python
-PIP := .gym/bin/pip
+PY := $(shell pwd)/.gym/bin/python
+PIP := $(shell pwd)/.gym/bin/pip
 
 install:
 	@echo "--- 🚀 Configuring environment and installing dependencies ---"
