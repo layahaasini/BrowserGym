@@ -1,7 +1,7 @@
 .SILENT:
 
-OPENAI_API_KEY := $(shell jq -r '.openai_api_key' secret_key.json)
-export OPENAI_API_KEY
+include .env
+export $(shell sed 's/=.*//' .env)
 
 PY := $(shell pwd)/.gym/bin/python
 PIP := $(shell pwd)/.gym/bin/pip
@@ -55,7 +55,6 @@ demo:
 		for TASK in $(TASKS); do \
 			echo "\n=== 🧠 Working on task: $$TASK ==="; \
 			BENCHMARK=$$(echo $$TASK | cut -d. -f1); \
-			[ "$$BENCHMARK" = "miniwob" ] && export MINIWOB_URL="file://$(shell pwd)/miniwob-plusplus/miniwob/html/miniwob/"; \
 			[ "$$BENCHMARK" = "webarena" ] && export WEB_ARENA_DATA_DIR="$(shell pwd)/../bg_wl_data"; \
 			[ "$$BENCHMARK" = "visualwebarena" ] && export DATASET=visualwebarena && \
 				export VWA_CLASSIFIEDS="http://localhost:9980" && \
