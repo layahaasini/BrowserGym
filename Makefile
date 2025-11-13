@@ -8,8 +8,12 @@ PIP := $(shell pwd)/.gym/bin/pip
 
 install:
 	@echo "--- 🚀 Configuring environment and installing dependencies ---"
-	sudo apt-get update && \
-	sudo apt-get install -y xvfb libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libatspi2.0-0 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango-1.0-0 libcairo2 libasound2
+	@if [ "$$(uname)" = "Linux" ]; then \
+		sudo apt-get update && \
+		sudo apt-get install -y xvfb libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libatspi2.0-0 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango-1.0-0 libcairo2 libasound2; \
+	else \
+		echo "Skipping apt-get (not Linux)."; \
+	fi
 	python3 -m venv .gym
 	@$(PIP) install --upgrade pip && $(PIP) install -r requirements.txt && $(PY) -m playwright install chromium
 	@if [ ! -d "miniwob-plusplus" ]; then \
@@ -24,49 +28,39 @@ install-agentbeats:
 
 register-agent:
 	wget -O red_agent_card.toml https://raw.githubusercontent.com/agentbeats/agentbeats/main/scenarios/templates/template_tensortrust_red_agent/red_agent_card.toml
-	sed -i 's/agent_url = "http:\/\/127.0.0.1:8000"/agent_url = "http:\/\/34.10.45.207:8000"/' red_agent_card.toml
-	sed -i 's/launcher_url = "http:\/\/127.0.0.1:8080"/launcher_url = "http:\/\/34.10.45.207:8080"/' red_agent_card.toml
-	sed -i 's/name = "TensorTrust"/name = "Benchwarmer Agent"/' red_agent_card.toml
-	@echo "Agent card downloaded and modified with our IP/port."
+	sed -i 's/agent_url = "http:\/\/127.0.0.1:8000"/agent_url = "http:\/\/$(AGENT_HOST):$(AGENT_PORT)"/' red_agent_card.toml
+	sed -i 's/launcher_url = "http:\/\/127.0.0.1:8080"/launcher_url = "http:\/\/$(LAUNCHER_HOST):$(LAUNCHER_PORT)"/' red_agent_card.toml
+	sed -i 's/name = "TensorTrust"/name = "$(AGENT_NAME)"/' red_agent_card.toml
 	$(PY) -m agentbeats run red_agent_card.toml \
-		--launcher_host 34.10.45.207 \
-		--launcher_port 8080 \
-		--agent_host 34.10.45.207 \
-		--agent_port 8000
+		--launcher_host $(LAUNCHER_HOST) \
+		--launcher_port $(LAUNCHER_PORT) \
+		--agent_host $(AGENT_HOST) \
+		--agent_port $(AGENT_PORT)
 	@echo "Running AgentBeats currently"
 
 register-battle:
 	curl -X POST https://agentbeats.org/battle/register \
-		-d "agent_url=http://34.10.45.207:8000" \
-		-d "battle_name=test_battle"
+		-d "agent_url=http://$(AGENT_HOST):$(AGENT_PORT)" \
+		-d "battle_name=$(BATTLE_NAME)"
 	@echo "Battle registered."
 
 demo:
-	@echo "--- 🚀 Running demo agent with tasks ---"
+	@echo "--- Running demo agent with tasks ---"
 	cd demo_agent && \
-	if [ -f "../.env" ]; then \
-		echo "Loading environment from ../.env"; \
 		export $$(grep -v '^#' ../.env | xargs); \
-	fi; \
-	if [ -z "$(TASKS)" ]; then \
-		echo "No TASKS specified — 🚀 running open-ended demo agent"; \
-		xvfb-run -a $(PY) run_demo.py; \
-	else \
-		for TASK in $(TASKS); do \
-			echo "\n=== 🧠 Working on task: $$TASK ==="; \
-			BENCHMARK=$$(echo $$TASK | cut -d. -f1); \
-			[ "$$BENCHMARK" = "webarena" ] && export WEB_ARENA_DATA_DIR="$(shell pwd)/../bg_wl_data"; \
-			[ "$$BENCHMARK" = "visualwebarena" ] && export DATASET=visualwebarena && \
-				export VWA_CLASSIFIEDS="http://localhost:9980" && \
-				export VWA_CLASSIFIEDS_RESET_TOKEN="4b61655535e7ed388f0d40a93600254c" && \
-				export VWA_SHOPPING="http://localhost:7770" && \
-				export VWA_REDDIT="http://localhost:9999" && \
-				export VWA_WIKIPEDIA="http://localhost:8888" && \
-				export VWA_HOMEPAGE="http://localhost:4399"; \
-			xvfb-run -a $(PY) run_demo.py --task $$TASK; \
-			echo "\n✅ Finished task: $$TASK"; \
-		done; \
-	fi
+		if [ -z "$(TASKS)" ]; then \
+			echo "No TASKS specified — running open-ended demo agent"; \
+			xvfb-run -a $(PY) run_demo.py; \
+		else \
+			for TASK in $(TASKS); do \
+				echo "\n=== Working on task: $$TASK ==="; \
+				BENCHMARK=$$(echo $$TASK | cut -d. -f1); \
+				[ "$$BENCHMARK" = "webarena" ] && export WEB_ARENA_DATA_DIR="$$WEB_ARENA_DATA_DIR"; \
+				[ "$$BENCHMARK" = "visualwebarena" ] && export DATASET="$$DATASET"; \
+				xvfb-run -a $(PY) run_demo.py --task $$TASK; \
+				echo "\n✅ Finished task: $$TASK"; \
+			done; \
+		fi
 
 test-core:
 	@echo "--- 🧪 Running tests ---"
