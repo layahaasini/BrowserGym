@@ -10,7 +10,8 @@ install:
 	@echo "--- 🚀 Configuring environment and installing dependencies ---"
 	@if [ "$$(uname)" = "Linux" ]; then \
 		sudo apt-get update && \
-		sudo apt-get install -y xvfb libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libatspi2.0-0 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango-1.0-0 libcairo2 libasound2; \
+		sudo apt-get install -y xvfb libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libatspi2.0-0 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango-1.0-0 libcairo2 libasound2 docker.io python3-pip && \
+		sudo pip3 install docker-compose && sudo usermod -aG docker $USER; \
 	else \
 		echo "Skipping apt-get (not Linux)."; \
 	fi
