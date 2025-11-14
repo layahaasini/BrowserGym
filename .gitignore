@@ -155,7 +155,7 @@ bg_wl_data/
 # miniwob setup
 miniwob-plusplus/
 
-uv.lock
+# webarena
+images/
 
-# environment export configurations
-secret_key.json
+uv.lock
