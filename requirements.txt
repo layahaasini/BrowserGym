@@ -16,3 +16,8 @@ playwright
 # Testing
 pytest
 pytest-xdist
+
+# A2A Server dependencies (for AgentBeats integration)
+fastapi
+uvicorn[standard]
+tomli-w  # Optional: for TOML agent card support
