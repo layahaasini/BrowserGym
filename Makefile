@@ -10,18 +10,30 @@ install:
 	@echo "--- 🚀 Configuring environment and installing dependencies ---"
 	@if [ "$$(uname)" = "Linux" ]; then \
 		sudo apt-get update && \
-		sudo apt-get install -y xvfb libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libatspi2.0-0 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango-1.0-0 libcairo2 libasound2 docker.io python3-pip && \
-		sudo pip3 install docker-compose && sudo usermod -aG docker $USER; \
+		sudo apt-get install -y xvfb libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libatspi2.0-0 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango-1.0-0 libcairo2 libasound2 docker.io python3-pip python3-venv && \
+		sudo apt install -y python3-pip python3-venv docker-compose && \
+		sudo usermod -aG docker $$USER; \
 	else \
 		echo "Skipping apt-get (not Linux)."; \
 	fi
 	python3 -m venv .gym
-	@$(PIP) install --upgrade pip && $(PIP) install -r requirements.txt && $(PY) -m playwright install chromium
+	@$(PIP) install --upgrade pip
+	@$(PIP) install --break-system-packages -r requirements.txt || true  # Run this to handle errors if they occur
+	@$(PIP) install -r requirements.txt
+	@$(PY) -m playwright install chromium
 	@if [ ! -d "miniwob-plusplus" ]; then \
 		git clone https://github.com/Farama-Foundation/miniwob-plusplus.git; \
 	fi
 	git -C miniwob-plusplus reset --hard 7fd85d71a4b60325c6585396ec4f48377d049838
 	echo "MINIWOB_URL=\"file://$(shell pwd)/miniwob-plusplus/miniwob/html/miniwob/\"" >> .env
+	docker pull $(SHOPPING_IMAGE_NAME)
+	docker pull $(SHOPPING_ADMIN_IMAGE_NAME)
+	docker pull $(GITLAB_IMAGE_NAME)
+	docker pull $(FORUM_IMAGE_NAME)
+	docker run --name shopping -p 7770:80 -d $(SHOPPING_IMAGE_NAME)
+	docker run --name shopping_admin -p 7771:80 -d $(SHOPPING_ADMIN_IMAGE_NAME)
+	docker run --name gitlab -p 8023:8023 -d $(GITLAB_IMAGE_NAME)
+	docker run --name forum -p 9999:80 -d $(FORUM_IMAGE_NAME)
 	@echo "✅ Environment setup complete."
 
 install-agentbeats:
