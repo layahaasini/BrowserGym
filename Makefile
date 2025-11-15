@@ -33,26 +33,32 @@ install-benchmark1:
 
 install-benchmark2-image-tars:
 	set -e
-	echo "== Loading Shopping Website =="
-	wget -O - http://metis.lti.cs.cmu.edu/webarena-images/shopping_final_0712.tar | docker load
+	mkdir -p tmp_images
+	wget -O tmp_images/shopping.tar http://metis.lti.cs.cmu.edu/webarena-images/shopping_final_0712.tar
+	docker load < tmp_images/shopping.tar
+	rm -f tmp_images/shopping.tar
 	docker run --name shopping -p 7770:80 -d shopping_final_0712
-	echo "== Loading Shopping Admin Website =="
-	wget -O - http://metis.lti.cs.cmu.edu/webarena-images/shopping_admin_final_0719.tar | docker load
+	wget -O tmp_images/shopping_admin.tar http://metis.lti.cs.cmu.edu/webarena-images/shopping_admin_final_0719.tar
+	docker load < tmp_images/shopping_admin.tar
+	rm -f tmp_images/shopping_admin.tar
 	docker run --name shopping_admin -p 7780:80 -d shopping_admin_final_0719
-	echo "== Loading Reddit / Forum Website =="
-	wget -O - http://metis.lti.cs.cmu.edu/webarena-images/postmill-populated-exposed-withimg.tar | docker load
+	wget -O tmp_images/forum.tar http://metis.lti.cs.cmu.edu/webarena-images/postmill-populated-exposed-withimg.tar
+	docker load < tmp_images/forum.tar
+	rm -f tmp_images/forum.tar
 	docker run --name forum -p 9999:80 -d postmill-populated-exposed-withimg
-	echo "== Loading GitLab Website =="
-	wget -O - http://metis.lti.cs.cmu.edu/webarena-images/gitlab-populated-final-port8023.tar | docker load
+	wget -O tmp_images/gitlab.tar http://metis.lti.cs.cmu.edu/webarena-images/gitlab-populated-final-port8023.tar
+	docker load < tmp_images/gitlab.tar
+	rm -f tmp_images/gitlab.tar
 	docker run --name gitlab -p 8023:8023 -d gitlab-populated-final-port8023 /opt/gitlab/embedded/bin/runsvdir-start
-	echo "== Starting Wikipedia WITHOUT downloading .zim locally =="
 	docker run -d \
-	--name wikipedia \
-	-p 8888:80 \
-	--mount type=tmpfs,destination=/data \
-	ghcr.io/kiwix/kiwix-serve:3.3.0 \
-	https://metis.lti.cs.cmu.edu/webarena-images/wikipedia_en_all_maxi_2022-05.zim
-	@echo "WebArena image tars uploaded to Docker."
+		--name wikipedia \
+		-p 8888:80 \
+		--mount type=tmpfs,destination=/data \
+		ghcr.io/kiwix/kiwix-serve:3.3.0 \
+		https://metis.lti.cs.cmu.edu/webarena-images/wikipedia_en_all_maxi_2022-05.zim
+	rm -rf tmp_images
+	@echo "WebArena images loaded and temporary files removed."
+
 
 install-benchmark2:
 	@echo "--- Starting Docker containers ---"
