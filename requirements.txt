@@ -13,6 +13,9 @@ browsergym
 openai
 playwright
 
+# Benchmarks
+gdown
+
 # Testing
 pytest
 pytest-xdist
