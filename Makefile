@@ -33,17 +33,18 @@ install-benchmark1:
 
 install-benchmark2-image-tars:
 	@mkdir -p images
-	gdown --fuzzy "https://drive.usercontent.google.com/download?id=1gxXalk9O0p9eu1YkIJcmZta1nvvyAJpA&confirm=t&authuser=0" -O images/shopping_admin_final_0712.tar
-	gdown --fuzzy "https://drive.usercontent.google.com/download?id=1See0ZhJRw0WTTL9y8hFlgaduwPZ_nGfd&confirm=t&authuser=0" -O images/shopping_admin_final_0719.tar
-	gdown --fuzzy "https://drive.usercontent.google.com/download?id=17Qpp1iu_mPqzgO_73Z9BnFjHrzmX9DGf&confirm=t&authuser=0" -O images/postmill-populated-exposed-withimg.tar
-	gdown --fuzzy "https://drive.usercontent.google.com/download?id=19W8qM0DPyRvWCLyQe0qtnCWAHGruolMR&confirm=t&authuser=0" -O images/gitlab-populated-final-port8023.tar
-	gdown --fuzzy "https://drive.usercontent.google.com/download?id=1Um4QLxi_bGv5bP6kt83Ke0lNjuV9Tm0P&confirm=t&authuser=0" -O images/Wikipedia.tar
+	wget -c http://metis.lti.cs.cmu.edu/webarena-images/shopping_final_0712.tar -O images/shopping_final_0712.tar
+	wget -c http://metis.lti.cs.cmu.edu/webarena-images/shopping_admin_final_0719.tar -O images/shopping_admin_final_0719.tar
+	wget -c http://metis.lti.cs.cmu.edu/webarena-images/postmill-populated-exposed-withimg.tar -O images/postmill-populated-exposed-withimg.tar
+	wget -c http://metis.lti.cs.cmu.edu/webarena-images/gitlab-populated-final-port8023.tar -O images/gitlab-populated-final-port8023.tar
+	wget -c http://metis.lti.cs.cmu.edu/webarena-images/wikipedia_en_all_maxi_2022-05.zim -O images/wikipedia_en_all_maxi_2022-05.zim
 	@docker login --username $(DOCKER_USERNAME) --password $(DOCKER_PASSWORD)
-	@docker load --input images/shopping_admin_final_0712.tar
-	@docker load --input images/shopping_admin_final_0719.tar
-	@docker load --input images/postmill-populated-exposed-withimg.tar
-	@docker load --input images/gitlab-populated-final-port8023.tar
-	docker run -d --name=wikipedia -p 8888:80 -v images:/data ghcr.io/kiwix/kiwix-serve:3.3.0 wikipedia_en_all_maxi_2022-05.zim
+	docker load --input images/shopping_final_0712.tar
+	docker load --input images/shopping_admin_final_0719.tar
+	docker load --input images/postmill-populated-exposed-withimg.tar
+	docker load --input images/gitlab-populated-final-port8023.tar
+	docker run -d --name=wikipedia -p 8888:80 -v $(PWD)/images:/data \
+		ghcr.io/kiwix/kiwix-serve:3.3.0 wikipedia_en_all_maxi_2022-05.zim
 	@@echo "WebArena image tars uploaded to Docker."
 
 install-benchmark2:
