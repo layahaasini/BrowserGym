@@ -32,20 +32,27 @@ install-benchmark1:
 	@echo "MiniWob++ setup complete."
 
 install-benchmark2-image-tars:
-	@mkdir -p images
-	wget -c http://metis.lti.cs.cmu.edu/webarena-images/shopping_final_0712.tar -O images/shopping_final_0712.tar
-	wget -c http://metis.lti.cs.cmu.edu/webarena-images/shopping_admin_final_0719.tar -O images/shopping_admin_final_0719.tar
-	wget -c http://metis.lti.cs.cmu.edu/webarena-images/postmill-populated-exposed-withimg.tar -O images/postmill-populated-exposed-withimg.tar
-	wget -c http://metis.lti.cs.cmu.edu/webarena-images/gitlab-populated-final-port8023.tar -O images/gitlab-populated-final-port8023.tar
-	wget -c http://metis.lti.cs.cmu.edu/webarena-images/wikipedia_en_all_maxi_2022-05.zim -O images/wikipedia_en_all_maxi_2022-05.zim
-	@docker login --username $(DOCKER_USERNAME) --password $(DOCKER_PASSWORD)
-	docker load --input images/shopping_final_0712.tar
-	docker load --input images/shopping_admin_final_0719.tar
-	docker load --input images/postmill-populated-exposed-withimg.tar
-	docker load --input images/gitlab-populated-final-port8023.tar
-	docker run -d --name=wikipedia -p 8888:80 -v $(PWD)/images:/data \
-		ghcr.io/kiwix/kiwix-serve:3.3.0 wikipedia_en_all_maxi_2022-05.zim
-	@@echo "WebArena image tars uploaded to Docker."
+	set -e
+	echo "== Loading Shopping Website =="
+	wget -O - http://metis.lti.cs.cmu.edu/webarena-images/shopping_final_0712.tar | docker load
+	docker run --name shopping -p 7770:80 -d shopping_final_0712
+	echo "== Loading Shopping Admin Website =="
+	wget -O - http://metis.lti.cs.cmu.edu/webarena-images/shopping_admin_final_0719.tar | docker load
+	docker run --name shopping_admin -p 7780:80 -d shopping_admin_final_0719
+	echo "== Loading Reddit / Forum Website =="
+	wget -O - http://metis.lti.cs.cmu.edu/webarena-images/postmill-populated-exposed-withimg.tar | docker load
+	docker run --name forum -p 9999:80 -d postmill-populated-exposed-withimg
+	echo "== Loading GitLab Website =="
+	wget -O - http://metis.lti.cs.cmu.edu/webarena-images/gitlab-populated-final-port8023.tar | docker load
+	docker run --name gitlab -p 8023:8023 -d gitlab-populated-final-port8023 /opt/gitlab/embedded/bin/runsvdir-start
+	echo "== Starting Wikipedia WITHOUT downloading .zim locally =="
+	docker run -d \
+	--name wikipedia \
+	-p 8888:80 \
+	--mount type=tmpfs,destination=/data \
+	ghcr.io/kiwix/kiwix-serve:3.3.0 \
+	https://metis.lti.cs.cmu.edu/webarena-images/wikipedia_en_all_maxi_2022-05.zim
+	@echo "WebArena image tars uploaded to Docker."
 
 install-benchmark2:
 	@echo "--- Starting Docker containers ---"
