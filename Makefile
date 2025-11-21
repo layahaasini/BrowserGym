@@ -32,32 +32,73 @@ install-benchmark1:
 	@echo "MiniWob++ setup complete."
 
 install-benchmark2-image-tars:
-	set -e
 	mkdir -p tmp_images
-	wget -O tmp_images/shopping.tar http://metis.lti.cs.cmu.edu/webarena-images/shopping_final_0712.tar
-	docker load < tmp_images/shopping.tar
-	rm -f tmp_images/shopping.tar
-	docker run --name shopping -p 7770:80 -d shopping_final_0712
-	wget -O tmp_images/shopping_admin.tar http://metis.lti.cs.cmu.edu/webarena-images/shopping_admin_final_0719.tar
-	docker load < tmp_images/shopping_admin.tar
-	rm -f tmp_images/shopping_admin.tar
-	docker run --name shopping_admin -p 7780:80 -d shopping_admin_final_0719
-	wget -O tmp_images/forum.tar http://metis.lti.cs.cmu.edu/webarena-images/postmill-populated-exposed-withimg.tar
-	docker load < tmp_images/forum.tar
-	rm -f tmp_images/forum.tar
-	docker run --name forum -p 9999:80 -d postmill-populated-exposed-withimg
-	wget -O tmp_images/gitlab.tar http://metis.lti.cs.cmu.edu/webarena-images/gitlab-populated-final-port8023.tar
-	docker load < tmp_images/gitlab.tar
-	rm -f tmp_images/gitlab.tar
-	docker run --name gitlab -p 8023:8023 -d gitlab-populated-final-port8023 /opt/gitlab/embedded/bin/runsvdir-start
-	docker run -d \
-		--name wikipedia \
-		-p 8888:80 \
-		--mount type=tmpfs,destination=/data \
-		ghcr.io/kiwix/kiwix-serve:3.3.0 \
-		https://metis.lti.cs.cmu.edu/webarena-images/wikipedia_en_all_maxi_2022-05.zim
+	@echo "--- Installing WebArena Docker images (will skip already installed) ---"
+	@if ! docker images | grep -q "shopping_final_0712"; then \
+		echo "Downloading shopping image..."; \
+		wget -O tmp_images/shopping.tar http://metis.lti.cs.cmu.edu/webarena-images/shopping_final_0712.tar || (echo "Download failed. You can resume later." && exit 1); \
+		docker load < tmp_images/shopping.tar; \
+		rm -f tmp_images/shopping.tar; \
+	else \
+		echo "Shopping image already loaded, skipping..."; \
+	fi
+	@if ! docker ps -a | grep -q "shopping$$"; then \
+		docker run --name shopping -p 7770:80 -d shopping_final_0712 || echo "Shopping container already exists or failed to start"; \
+	else \
+		echo "Shopping container already exists, starting if stopped..."; \
+		docker start shopping 2>/dev/null || true; \
+	fi
+	@if ! docker images | grep -q "shopping_admin_final_0719"; then \
+		echo "Downloading shopping_admin image..."; \
+		wget -O tmp_images/shopping_admin.tar http://metis.lti.cs.cmu.edu/webarena-images/shopping_admin_final_0719.tar || (echo "Download failed. You can resume later." && exit 1); \
+		docker load < tmp_images/shopping_admin.tar; \
+		rm -f tmp_images/shopping_admin.tar; \
+	else \
+		echo "Shopping_admin image already loaded, skipping..."; \
+	fi
+	@if ! docker ps -a | grep -q "shopping_admin$$"; then \
+		docker run --name shopping_admin -p 7780:80 -d shopping_admin_final_0719 || echo "Shopping_admin container already exists or failed to start"; \
+	else \
+		echo "Shopping_admin container already exists, starting if stopped..."; \
+		docker start shopping_admin 2>/dev/null || true; \
+	fi
+	@if ! docker images | grep -q "postmill-populated-exposed-withimg"; then \
+		echo "Downloading forum image..."; \
+		wget -O tmp_images/forum.tar http://metis.lti.cs.cmu.edu/webarena-images/postmill-populated-exposed-withimg.tar || (echo "Download failed. You can resume later." && exit 1); \
+		docker load < tmp_images/forum.tar; \
+		rm -f tmp_images/forum.tar; \
+	else \
+		echo "Forum image already loaded, skipping..."; \
+	fi
+	@if ! docker ps -a | grep -q "forum$$"; then \
+		docker run --name forum -p 9999:80 -d postmill-populated-exposed-withimg || echo "Forum container already exists or failed to start"; \
+	else \
+		echo "Forum container already exists, starting if stopped..."; \
+		docker start forum 2>/dev/null || true; \
+	fi
+	@if ! docker images | grep -q "gitlab-populated-final-port8023"; then \
+		echo "Downloading gitlab image..."; \
+		wget -O tmp_images/gitlab.tar http://metis.lti.cs.cmu.edu/webarena-images/gitlab-populated-final-port8023.tar || (echo "Download failed. You can resume later." && exit 1); \
+		docker load < tmp_images/gitlab.tar; \
+		rm -f tmp_images/gitlab.tar; \
+	else \
+		echo "Gitlab image already loaded, skipping..."; \
+	fi
+	@if ! docker ps -a | grep -q "gitlab$$"; then \
+		docker run --name gitlab -p 8023:8023 -d gitlab-populated-final-port8023 /opt/gitlab/embedded/bin/runsvdir-start || echo "Gitlab container already exists or failed to start"; \
+	else \
+		echo "Gitlab container already exists, starting if stopped..."; \
+		docker start gitlab 2>/dev/null || true; \
+	fi
+	@if ! docker ps -a | grep -q "wikipedia$$"; then \
+		echo "Starting wikipedia container..."; \
+		docker run -d --name wikipedia -p 8888:80 --mount type=tmpfs,destination=/data ghcr.io/kiwix/kiwix-serve:3.3.0 https://metis.lti.cs.cmu.edu/webarena-images/wikipedia_en_all_maxi_2022-05.zim || echo "Wikipedia container already exists or failed to start"; \
+	else \
+		echo "Wikipedia container already exists, starting if stopped..."; \
+		docker start wikipedia 2>/dev/null || true; \
+	fi
 	rm -rf tmp_images
-	@echo "WebArena images loaded and temporary files removed."
+	@echo "✅ WebArena images installation complete (skipped already installed images)"
 
 
 install-benchmark2:
@@ -139,6 +180,35 @@ demo:
 			done; \
 		fi
 
+GREEN_AGENT_PATH ?= demo_agent/agent.py
+GREEN_MAX_STEPS ?= 50
+
+green-workarena:
+	@if [ -z "$(TASK)" ]; then \
+		echo "Please provide TASK=workarena.servicenow.<task-name>"; \
+		exit 1; \
+	fi
+	@echo "--- Running Green Evaluator on WorkArena task: $(TASK) ---"
+	export $$(grep -v '^#' .env | xargs); \
+	$(PY) green_evaluator.py \
+		--agent_path $(GREEN_AGENT_PATH) \
+		--task $(TASK) \
+		--max_steps $(GREEN_MAX_STEPS)
+
+green-webarena:
+	@if [ -z "$(TASK)" ]; then \
+		echo "Please provide TASK=webarena.<task-id> (e.g., TASK=webarena.4)"; \
+		exit 1; \
+	fi
+	@echo "--- Running Green Evaluator on WebArena task: $(TASK) ---"
+	@echo "Note: WebArena requires Docker containers running on your GCP VM"
+	@echo "Make sure WA_* environment variables are set in .env pointing to your VM"
+	export $$(grep -v '^#' .env | xargs); \
+	$(PY) green_evaluator.py \
+		--agent_path $(GREEN_AGENT_PATH) \
+		--task $(TASK) \
+		--max_steps $(GREEN_MAX_STEPS)
+
 test-core:
 	@echo "--- 🧪 Running tests ---"
 	$(PY) -m pytest -n auto ./tests/core
@@ -158,8 +228,10 @@ help:
 	@echo "  register-agent                   - Register your agent onto the Agentbeats platform"
 	@echo "  register-battle                  - Register your agent for an Agentbeats battle"
 	@echo "  demo                             - Run demo agent"
+	@echo "  green-workarena                  - Run Green Evaluator on a WorkArena task (set TASK=...)"
+	@echo "  green-webarena                   - Run Green Evaluator on a WebArena task (set TASK=...)"
 	@echo "  test-core                        - Run core tests"
 	@echo "  clean-miniwob                    - Remove MiniWoB++ directory"
 	@echo "  help                             - Show this help message"
 
-.PHONY: install install-benchmark1 install-benchmark2-image-tars install-benchmark2 install-agentbeats register-agent register-battle demo test-core clean-miniwob help
+.PHONY: install install-benchmark1 install-benchmark2-image-tars install-benchmark2 install-agentbeats register-agent register-battle demo green-workarena green-webarena test-core clean-miniwob help
