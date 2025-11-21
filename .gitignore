@@ -157,5 +157,6 @@ miniwob-plusplus/
 
 # webarena
 images/
+tmp_images/
 
 uv.lock
