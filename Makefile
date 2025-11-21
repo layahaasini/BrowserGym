@@ -36,7 +36,7 @@ install-benchmark2-image-tars:
 	@echo "--- Installing WebArena Docker images (will skip already installed) ---"
 	@if ! docker images | grep -q "shopping_final_0712"; then \
 		echo "Downloading shopping image..."; \
-		wget -O tmp_images/shopping.tar http://metis.lti.cs.cmu.edu/webarena-images/shopping_final_0712.tar || (echo "Download failed. You can resume later." && exit 1); \
+		wget -c -O tmp_images/shopping.tar http://metis.lti.cs.cmu.edu/webarena-images/shopping_final_0712.tar || (echo "Download failed. You can resume later by running this command again." && exit 1); \
 		docker load < tmp_images/shopping.tar; \
 		rm -f tmp_images/shopping.tar; \
 	else \
@@ -50,7 +50,7 @@ install-benchmark2-image-tars:
 	fi
 	@if ! docker images | grep -q "shopping_admin_final_0719"; then \
 		echo "Downloading shopping_admin image..."; \
-		wget -O tmp_images/shopping_admin.tar http://metis.lti.cs.cmu.edu/webarena-images/shopping_admin_final_0719.tar || (echo "Download failed. You can resume later." && exit 1); \
+		wget -c -O tmp_images/shopping_admin.tar http://metis.lti.cs.cmu.edu/webarena-images/shopping_admin_final_0719.tar || (echo "Download failed. You can resume later by running this command again." && exit 1); \
 		docker load < tmp_images/shopping_admin.tar; \
 		rm -f tmp_images/shopping_admin.tar; \
 	else \
@@ -64,7 +64,7 @@ install-benchmark2-image-tars:
 	fi
 	@if ! docker images | grep -q "postmill-populated-exposed-withimg"; then \
 		echo "Downloading forum image..."; \
-		wget -O tmp_images/forum.tar http://metis.lti.cs.cmu.edu/webarena-images/postmill-populated-exposed-withimg.tar || (echo "Download failed. You can resume later." && exit 1); \
+		wget -c -O tmp_images/forum.tar http://metis.lti.cs.cmu.edu/webarena-images/postmill-populated-exposed-withimg.tar || (echo "Download failed. You can resume later by running this command again." && exit 1); \
 		docker load < tmp_images/forum.tar; \
 		rm -f tmp_images/forum.tar; \
 	else \
@@ -78,7 +78,7 @@ install-benchmark2-image-tars:
 	fi
 	@if ! docker images | grep -q "gitlab-populated-final-port8023"; then \
 		echo "Downloading gitlab image..."; \
-		wget -O tmp_images/gitlab.tar http://metis.lti.cs.cmu.edu/webarena-images/gitlab-populated-final-port8023.tar || (echo "Download failed. You can resume later." && exit 1); \
+		wget -c -O tmp_images/gitlab.tar http://metis.lti.cs.cmu.edu/webarena-images/gitlab-populated-final-port8023.tar || (echo "Download failed. You can resume later by running this command again." && exit 1); \
 		docker load < tmp_images/gitlab.tar; \
 		rm -f tmp_images/gitlab.tar; \
 	else \
