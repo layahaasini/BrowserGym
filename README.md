@@ -19,15 +19,30 @@ BrowserGym integrates multiple web automation and reasoning benchmarks:
 
 ## Setup
 
-### 1. Clone the repository
+### 1. Create a compute instance
+- gcp, ec2, etc (AWS is recommended if you want to have an easier setup for benchmark 2, but any work fine)
+- recommended system: ubuntu
+- ssh into the instance with ssh in browser or ssh -i <private ssh key file> <user>@<external_ip_address>
+--> can run whoami to find out user id
+
+### 2. Configure OpenAI API Key
+- get openaikey 
+- in .env, export it
+```
+OPENAI_API_KEY="<key beginning with sk-proj- ...>"
+```
+
+### 3. Clone the Repository
 ~~~bash
 git clone <repository-url>
 cd BrowserGym
 ~~~
 
-### 2. Install `make`
-If you’ve never used `make`:
-~~~bash
+### 4. Set Up The Environment
+- make sure to change lines 6-7 depending on what version you have
+
+- install make if you have never used it
+```
 # Ubuntu/Debian
 sudo apt update && sudo apt install make -y
 
@@ -39,24 +54,117 @@ sudo pacman -S make
 
 # macOS (via Homebrew)
 brew install make
-~~~
-
-### 3. Set up the environment
-If using Windows, modify line 11 of the `Makefile` to:
-~~~bash
-	@bash -c "source .gym/Scripts/activate && pip install -r requirements.txt && playwright install chromium"
-~~~
-
-Otherwise (Linux/macOS) leave it as:
-~~~bash
-	@bash -c "source .gym/bin/activate && pip install -r requirements.txt && playwright install chromium"
-~~~
-
-### 4. Install dependencies
+```
 ~~~bash
 make install
-make setup-miniwob
 ~~~
+
+### 5. Set up the benchmarks
+Benchmark 1: MiniWob++
+```make benchmark1```
+- if done correctly, you should see this in ur .env
+```
+MINIWOB_URL="file:///<PWD>/BrowserGym/miniwob-plusplus/miniwob/html/miniwob/"
+```
+
+Benchmark 2: WebArena
+- make baseurl = port or localhost in .env
+```
+BASE_URL="http://<FILL IN EXTERNAL IP ADDRESS>"
+BASE_URL="http://localhost"
+```
+- configure docker username/pass in .env
+```
+DOCKER_USERNAME=<FILL IN USERNAME>
+DOCKER_PASSWORD=<FILL IN PASSWORD>
+```
+- configure instance as needed
+if using aws, 
+--> use ami to start new ec2 instance (EC2 console >> AMIs) - further instructions found [in recommended path](https://github.com/web-arena-x/webarena/blob/main/environment_docker/README.md#individual-website) and ```make install-benchmark2```
+--> troubleshooting? make sure region set to ohio and if image names are not configured, mkae sure they appear in docker images
+if using another instance,
+```
+make install-benchmark2-image-tars
+```
+- install the benchmark
+```
+make install-benchmark2
+```
+
+Benchmark 3: VisualWebArena
+- TBD
+
+Benchmark 4: WorkArena
+- TBD
+
+Benchmark 5: AssistantBench
+- no set up required
+
+Benchmark 6: Weblinx
+- add the following into your .env
+```
+WEBLINX_ROOT=${PWD}/weblinx
+WEBLINX_PROJECT_DIR=${PWD}/weblinx/modeling
+WEBLINX_DATA_DIR=${PWD}/weblinx/modeling/wl_data
+```
+- run make install-benchmark5
+
+### Sanity Check
+if all works as expected, ur .env should look something like this
+```
+# OpenAI
+OPENAI_API_KEY="sk-proj-<FILL IN KEY>"
+
+# Benchmark 1: MiniWoB++
+MINIWOB_URL="file:///<FILL IN PWD>/BrowserGym/miniwob-plusplus/miniwob/html/miniwob/"
+
+# Benchmark 2: WebArena (AWS or other)
+BASE_URL="http://<FILL IN EXTERNAL IP ADDRESS>" or "http://localhost"
+DOCKER_USERNAME=<FILL IN USERNAME>
+DOCKER_PASSWORD=<FILL IN PASSWORD>
+SHOPPING_IMAGE_NAME="shopping_final_0712"
+SHOPPING_ADMIN_IMAGE_NAME="shopping_admin_final_0719"
+GITLAB_IMAGE_NAME="gitlab-populated-final-port8023" 
+FORUM_IMAGE_NAME="postmill-populated-exposed-withimg" 
+WA_SHOPPING="${BASE_URL}:7770"
+WA_SHOPPING_ADMIN="${BASE_URL}:7771"
+WA_REDDIT="${BASE_URL}:9999"
+WA_GITLAB="${BASE_URL}:9980"
+WA_WIKIPEDIA="${BASE_URL}:8888"
+WA_MAP="${BASE_URL}:4444"
+WA_HOMEPAGE="${BASE_URL}:4399"
+VWA_CLASSIFIEDS="${BASE_URL}:9980"
+VWA_CLASSIFIEDS_RESET_TOKEN="4b61655535e7ed388f0d40a93600254c"
+# Optional WebArena Config
+MAP_BACKEND_IP="${BASE_URL}:3000"
+# Optional (if using WebArena's Full Reset feature)
+# WA_FULL_RESET="${BASE_URL}:7565"
+
+# Benchmark 3: VisualWebArena
+DATASET=visualwebarena
+VWA_CLASSIFIEDS=http://localhost:9980
+VWA_CLASSIFIEDS_RESET_TOKEN=4b61655535e7ed388f0d40a93600254c
+VWA_SHOPPING=http://localhost:7770
+VWA_REDDIT=http://localhost:9999
+VWA_WIKIPEDIA=http://localhost:8888
+VWA_HOMEPAGE=http://localhost:4399
+
+# Benchmark 4: WorkArena
+SNOW_INSTANCE_URL=<<FILL IN INSTANCE URL>>
+SNOW_INSTANCE_UNAME=<FILL IN INSTANCE USERNAME>>
+SNOW_INSTANCE_PWD=<FILL IN INSTANCE PASSWORD>>
+
+# Benchmark 5: Weblinx
+WEBLINX_ROOT=${PWD}/weblinx
+WEBLINX_PROJECT_DIR=${PWD}/weblinx/modeling
+WEBLINX_DATA_DIR=${PWD}/weblinx/modeling/wl_data
+
+# AgentBeats
+AGENT_HOST=<FILL IN EXTERNAL IP ADDRESS> or localhost if not running on SSH on VM
+AGENT_PORT=8000
+LAUNCHER_HOST=<FILL IN EXTERNAL IP ADDRESS> or localhost
+LAUNCHER_PORT=8080
+```
 
 ---
 
@@ -100,6 +208,11 @@ make demo TASKS="visualwebarena.721"
 ~~~
 
 #### AssistantBench
+~~~bash
+make demo TASKS="assistantbench.validation.3"
+~~~
+
+#### WebLinx
 ~~~bash
 make demo TASKS="assistantbench.validation.3"
 ~~~

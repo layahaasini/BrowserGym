@@ -10,6 +10,9 @@
 
 # Base libraries
 browsergym
+weblinx
+weblinx[all]
+huggingface_hub
 openai
 playwright
 

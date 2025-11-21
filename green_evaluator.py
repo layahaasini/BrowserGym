@@ -4,16 +4,18 @@ Green Evaluator Agent - A Benchmark Testing Framework
 ====================================================
 
 This is a bare bones green evaluator agent that acts as a wrapper for testing
-other web agents (white/demo agents) on BrowserGym benchmarks, specifically MiniWoB.
+other web agents (white/demo agents) on BrowserGym benchmarks, including MiniWoB, WorkArena, and WebArena.
 
 The green evaluator:
 1. Takes other agents as input
-2. Runs them through MiniWoB benchmark tasks
+2. Runs them through BrowserGym benchmark tasks (MiniWoB, WorkArena, WebArena, etc.)
 3. Evaluates their performance
 4. Generates evaluation reports
 
 Usage (Standalone):
     python3 green_evaluator.py --agent_path demo_agent/agent.py --task miniwob.click-dialog
+    python3 green_evaluator.py --agent_path demo_agent/agent.py --task workarena.servicenow.order-standard-laptop
+    python3 green_evaluator.py --agent_path demo_agent/agent.py --task webarena.4
 
 Usage (A2A Server for AgentBeats):
     python3 green_evaluator.py --a2a-server --host 0.0.0.0 --port 8000 --card-url http://your-public-url:8000
@@ -272,6 +274,28 @@ class GreenEvaluator:
             # Run the evaluation
             self.logger.info(f"Starting evaluation in: {exp_dir}")
             
+            # Import and prepare backend if needed (WorkArena, WebArena require backend preparation)
+            if task_name.startswith("workarena"):
+                try:
+                    # Import WorkArena to register the environments
+                    import browsergym.workarena
+                    from browsergym.experiments.benchmark.utils import prepare_backend
+                    self.logger.info("Preparing WorkArena backend...")
+                    prepare_backend("workarena")
+                    self.logger.info("WorkArena backend ready")
+                except Exception as e:
+                    self.logger.warning(f"Backend preparation warning (may continue anyway): {e}")
+            elif task_name.startswith("webarena"):
+                try:
+                    # Import WebArena to register the environments
+                    import browsergym.webarena
+                    from browsergym.experiments.benchmark.utils import prepare_backend
+                    self.logger.info("Preparing WebArena backend...")
+                    prepare_backend("webarena")
+                    self.logger.info("WebArena backend ready")
+                except Exception as e:
+                    self.logger.warning(f"Backend preparation warning (may continue anyway): {e}")
+            
             # Prepare the experiment
             exp_args.prepare(str(self.results_dir))
             
@@ -340,7 +364,10 @@ class GreenEvaluator:
             return result
             
         except Exception as e:
+            import traceback
+            error_traceback = traceback.format_exc()
             self.logger.error(f"Evaluation failed: {e}")
+            self.logger.error(f"Full traceback:\n{error_traceback}")
             return {
                 "task_name": task_name,
                 "success": False,
@@ -348,6 +375,7 @@ class GreenEvaluator:
                 "total_reward": 0,
                 "max_steps": max_steps,
                 "error": str(e),
+                "error_traceback": error_traceback,
                 "exp_dir": str(exp_dir),
                 "timestamp": timestamp
             }
@@ -436,6 +464,140 @@ def get_miniwob_task_list() -> List[str]:
     ]
 
 
+def get_workarena_task_list(level: str = "l1", max_tasks: Optional[int] = None) -> List[str]:
+    """
+    Get a list of WorkArena benchmark tasks for evaluation.
+    
+    Args:
+        level: WorkArena level to use ("l1", "l2", or "l3"). Defaults to "l1".
+        max_tasks: Maximum number of tasks to return. If None, returns all tasks for the level.
+    
+    Returns:
+        List of WorkArena task names
+    """
+    # Try to load from the metadata CSV file
+    try:
+        import pandas as pd
+        # Try multiple possible paths
+        possible_paths = [
+            Path(__file__).parent / "browsergym" / "experiments" / "src" / "browsergym" / "experiments" / "benchmark" / "metadata" / "workarena.csv",
+            Path(__file__).parent.parent / "browsergym" / "experiments" / "src" / "browsergym" / "experiments" / "benchmark" / "metadata" / "workarena.csv",
+        ]
+        
+        metadata_path = None
+        for path in possible_paths:
+            if path.exists():
+                metadata_path = path
+                break
+        
+        if metadata_path:
+            df = pd.read_csv(metadata_path)
+            # Filter by level
+            level_tasks = df[df["level"] == level]["task_name"].tolist()
+            
+            if max_tasks:
+                return level_tasks[:max_tasks]
+            return level_tasks
+    except Exception as e:
+        # Fallback to hardcoded list if CSV loading fails
+        pass
+    
+    # Fallback: return a curated list of common L1 WorkArena tasks
+    l1_tasks = [
+        "workarena.servicenow.order-standard-laptop",
+        "workarena.servicenow.order-ipad-pro",
+        "workarena.servicenow.order-developer-laptop",
+        "workarena.servicenow.create-incident",
+        "workarena.servicenow.create-change-request",
+        "workarena.servicenow.filter-asset-list",
+        "workarena.servicenow.sort-asset-list",
+        "workarena.servicenow.single-chart-value-retrieval",
+    ]
+    
+    if level == "l1":
+        return l1_tasks[:max_tasks] if max_tasks else l1_tasks
+    else:
+        # For l2/l3, return empty list in fallback mode (should use CSV)
+        return []
+
+
+def get_webarena_task_list(max_tasks: Optional[int] = None) -> List[str]:
+    """
+    Get a list of WebArena benchmark tasks for evaluation.
+    
+    Args:
+        max_tasks: Maximum number of tasks to return. If None, returns a curated list.
+    
+    Returns:
+        List of WebArena task names
+    """
+    # Try to load from the metadata CSV file
+    try:
+        import pandas as pd
+        # Try multiple possible paths
+        possible_paths = [
+            Path(__file__).parent / "browsergym" / "experiments" / "src" / "browsergym" / "experiments" / "benchmark" / "metadata" / "webarena.csv",
+            Path(__file__).parent.parent / "browsergym" / "experiments" / "src" / "browsergym" / "experiments" / "benchmark" / "metadata" / "webarena.csv",
+        ]
+        
+        metadata_path = None
+        for path in possible_paths:
+            if path.exists():
+                metadata_path = path
+                break
+        
+        if metadata_path:
+            df = pd.read_csv(metadata_path)
+            # Get all task names
+            all_tasks = df["task_name"].tolist()
+            
+            if max_tasks:
+                return all_tasks[:max_tasks]
+            return all_tasks
+    except Exception as e:
+        # Fallback to hardcoded list if CSV loading fails
+        pass
+    
+    # Fallback: return a curated list of common WebArena tasks
+    # These are some representative tasks from different sites
+    webarena_tasks = [
+        "webarena.4",      # shopping_admin
+        "webarena.7",      # map
+        "webarena.21",     # shopping
+        "webarena.27",     # reddit
+        "webarena.410",    # reddit (commonly used)
+        "webarena.533",    # gitlab (commonly used)
+        "webarena.561",    # gitlab wiki
+        "webarena.562",    # gitlab reddit
+        "webarena.574",    # shopping
+        "webarena.640",    # reddit
+        "webarena.680",    # shopping_admin
+        "webarena.740",    # wiki map
+    ]
+    
+    return webarena_tasks[:max_tasks] if max_tasks else webarena_tasks
+
+
+def get_task_list_by_benchmark(benchmark: str) -> List[str]:
+    """
+    Get a task list for a specific benchmark.
+    
+    Args:
+        benchmark: Benchmark name ("miniwob", "workarena", or "webarena")
+    
+    Returns:
+        List of task names for the benchmark
+    """
+    if benchmark.lower() == "miniwob":
+        return get_miniwob_task_list()
+    elif benchmark.lower() == "workarena":
+        return get_workarena_task_list()
+    elif benchmark.lower() == "webarena":
+        return get_webarena_task_list()
+    else:
+        raise ValueError(f"Unknown benchmark: {benchmark}. Supported: 'miniwob', 'workarena', 'webarena'")
+
+
 # ============================================================================
 # A2A Server Implementation for AgentBeats
 # ============================================================================
@@ -498,10 +660,11 @@ if A2A_AVAILABLE:
                 """Return agent card information"""
                 return {
                     "name": "BrowserGym Green Evaluator",
-                    "description": "Evaluates web agents on BrowserGym benchmarks (MiniWoB, WebArena, etc.)",
+                    "description": "Evaluates web agents on BrowserGym benchmarks (MiniWoB, WorkArena, WebArena, etc.)",
                     "url": self.card_url or "http://localhost:8000",
                     "capabilities": [
                         "miniwob_benchmark",
+                        "workarena_benchmark",
                         "webarena_benchmark",
                         "agent_evaluation"
                     ]
@@ -589,9 +752,46 @@ if A2A_AVAILABLE:
                 })
                 
                 # Get task list from config or use default
-                task_list = config.get("tasks", get_miniwob_task_list())
-                if isinstance(task_list, str):
-                    task_list = [task_list]
+                # Support both explicit task lists and benchmark names
+                tasks_config = config.get("tasks")
+                if tasks_config is None:
+                    # Default to MiniWoB if no tasks specified
+                    task_list = get_miniwob_task_list()
+                elif isinstance(tasks_config, str):
+                    # Check if it's a benchmark name or a single task
+                    if tasks_config.lower() in ["miniwob", "workarena", "webarena"]:
+                        task_list = get_task_list_by_benchmark(tasks_config)
+                    else:
+                        # Single task name
+                        task_list = [tasks_config]
+                elif isinstance(tasks_config, list):
+                    task_list = tasks_config
+                else:
+                    raise ValueError(f"Invalid tasks config: {tasks_config}")
+                
+                # Also support benchmark name in config
+                benchmark_name = config.get("benchmark")
+                if benchmark_name and not tasks_config:
+                    task_list = get_task_list_by_benchmark(benchmark_name)
+                
+                # Determine which backends need to be prepared based on task list
+                backends_to_prepare = set()
+                for task in task_list:
+                    if isinstance(task, str):
+                        if task.startswith("miniwob"):
+                            backends_to_prepare.add("miniwob")
+                        elif task.startswith("workarena"):
+                            backends_to_prepare.add("workarena")
+                        elif task.startswith("webarena"):
+                            backends_to_prepare.add("webarena")
+                
+                # Prepare backends
+                if backends_to_prepare:
+                    await self._emit_task_update(task_id, {
+                        "status": "preparing",
+                        "message": f"Preparing backends: {', '.join(backends_to_prepare)}"
+                    })
+                    self._prepare_backends(backends_to_prepare)
                 
                 # For now, we'll evaluate using local agent loading
                 # In a full implementation, you'd interact with purple agents via A2A
@@ -684,6 +884,22 @@ if A2A_AVAILABLE:
                 })
                 raise
         
+        def _prepare_backends(self, backends: set):
+            """Prepare benchmark backends"""
+            try:
+                from browsergym.experiments.benchmark.utils import prepare_backend
+                
+                for backend in backends:
+                    try:
+                        self.evaluator.logger.info(f"Preparing {backend} backend...")
+                        prepare_backend(backend)
+                        self.evaluator.logger.info(f"{backend} backend ready")
+                    except Exception as e:
+                        self.evaluator.logger.warning(f"Failed to prepare {backend} backend: {e}")
+                        # Continue with other backends
+            except ImportError:
+                self.evaluator.logger.warning("Could not import prepare_backend, skipping backend preparation")
+        
         async def _emit_task_update(self, task_id: str, content: Dict[str, Any]):
             """Emit a task update (in a real implementation, this would be sent via A2A)"""
             self.evaluator.logger.info(f"Task {task_id} update: {content}")
@@ -695,12 +911,12 @@ def create_agent_card(card_path: str, card_url: str):
     """Create an agent card TOML file"""
     card_data = {
         "name": "BrowserGym Green Evaluator",
-        "description": "A green agent that evaluates web agents on BrowserGym benchmarks including MiniWoB, WebArena, and VisualWebArena",
+        "description": "A green agent that evaluates web agents on BrowserGym benchmarks including MiniWoB, WorkArena, and WebArena",
         "url": card_url,
         "capabilities": [
             "miniwob_benchmark",
+            "workarena_benchmark",
             "webarena_benchmark",
-            "visualwebarena_benchmark",
             "agent_evaluation"
         ]
     }
@@ -822,11 +1038,33 @@ def main():
     # Initialize the Green Evaluator
     evaluator = GreenEvaluator(results_dir=args.results_dir)
     
-    # Check if required environment variables are set
-    if not os.getenv('MINIWOB_URL'):
-        evaluator.logger.error("MINIWOB_URL environment variable not set!")
-        evaluator.logger.error("Please run: source .env")
-        sys.exit(1)
+    # Determine which task(s) will be evaluated
+    task_to_check = args.task
+    if not task_to_check:
+        # Default to MiniWoB if no task specified
+        task_to_check = "miniwob.click-dialog"  # Just for env var checking
+    
+    # Check required environment variables based on task type
+    if task_to_check.startswith("miniwob"):
+        if not os.getenv('MINIWOB_URL'):
+            evaluator.logger.error("MINIWOB_URL environment variable not set!")
+            evaluator.logger.error("Please run: source .env")
+            sys.exit(1)
+    elif task_to_check.startswith("workarena"):
+        required_vars = ['SNOW_INSTANCE_URL', 'SNOW_INSTANCE_UNAME', 'SNOW_INSTANCE_PWD']
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
+        if missing_vars:
+            evaluator.logger.error(f"Missing required environment variables for WorkArena: {', '.join(missing_vars)}")
+            evaluator.logger.error("Please set SNOW_INSTANCE_URL, SNOW_INSTANCE_UNAME, and SNOW_INSTANCE_PWD")
+            sys.exit(1)
+    elif task_to_check.startswith("webarena"):
+        required_vars = ['WA_SHOPPING', 'WA_SHOPPING_ADMIN', 'WA_REDDIT', 'WA_GITLAB', 'WA_WIKIPEDIA', 'WA_MAP', 'WA_HOMEPAGE']
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
+        if missing_vars:
+            evaluator.logger.error(f"Missing required environment variables for WebArena: {', '.join(missing_vars)}")
+            evaluator.logger.error("Please set WA_SHOPPING, WA_SHOPPING_ADMIN, WA_REDDIT, WA_GITLAB, WA_WIKIPEDIA, WA_MAP, and WA_HOMEPAGE")
+            evaluator.logger.error("These should point to your GCP VM instance where WebArena Docker containers are running")
+            sys.exit(1)
     
     if not os.getenv('OPENAI_API_KEY'):
         evaluator.logger.error("OPENAI_API_KEY environment variable not set!")
@@ -848,8 +1086,9 @@ def main():
             print(f"Reward: {result['total_reward']}")
             
         else:
-            # Evaluate on full benchmark suite
-            evaluator.logger.info("Full benchmark suite evaluation")
+            # Evaluate on full benchmark suite (default to MiniWoB)
+            evaluator.logger.info("Full benchmark suite evaluation (defaulting to MiniWoB)")
+            evaluator.logger.info("Use --task to specify a specific task or modify code to use different benchmark")
             task_list = get_miniwob_task_list()
             results = evaluator.evaluate_agent_on_benchmark_suite(agent, task_list)
             
