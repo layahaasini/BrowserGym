@@ -151,7 +151,7 @@ tests/assistantbench/assistantbench-predictions-test.jsonl
 
 # weblinx
 bg_wl_data/
-weblinx/
+weblinx/models/*
 
 # miniwob setup
 miniwob-plusplus/
