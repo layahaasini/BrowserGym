@@ -11,7 +11,7 @@ os.makedirs(project_dir, exist_ok=True)
 os.makedirs(data_dir, exist_ok=True)
 
 snapshot_download(
-    repo_id="McGill-NLP/WebLINX-1.1",
+    repo_id="McGill-NLP/WebLINX-full",
     repo_type="dataset",
     local_dir=data_dir,
 )
