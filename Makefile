@@ -147,6 +147,17 @@ install-benchmark2:
 	curl -s -o /dev/null -w "Map tile: %{http_code}\n" http://$(HOSTNAME):3000/tile/0/0/0.png
 	@echo "WebArena setup complete."
 
+install-benchmark6:
+	@if [ ! -d "$(WEBLINX_ROOT)" ]; then \
+		git clone https://github.com/McGill-NLP/WebLINX.git $(WEBLINX_ROOT); \
+	fi
+	@mkdir -p $(WEBLINX_PROJECT_DIR)
+	@mkdir -p $(WEBLINX_DATA_DIR)
+	@$(PIP) install -e $(WEBLINX_ROOT)
+	wget -O $(WEBLINX_DATA_DIR)/weblinx_data.zip https://github.com/McGill-NLP/WebLINX/releases/download/data/WebLINX_v1_data.zip
+	unzip -o $(WEBLINX_DATA_DIR)/weblinx_data.zip -d $(WEBLINX_DATA_DIR)
+	@echo "Weblinx setup complete."
+
 install-agentbeats:
 	@$(PIP) install git+https://github.com/agentbeats/agentbeats.git@main openai
 
