@@ -34,9 +34,15 @@ install-benchmark1:
 install-benchmark2-image-tars:
 	mkdir -p tmp_images
 	@echo "--- Installing WebArena Docker images (will skip already installed) ---"
-	@if ! docker images | grep -q "shopping_final_0712"; then \
-		echo "Downloading shopping image..."; \
-		wget -c -O tmp_images/shopping.tar http://metis.lti.cs.cmu.edu/webarena-images/shopping_final_0712.tar || (echo "Download failed. You can resume later by running this command again." && exit 1); \
+	@if ! docker image inspect shopping_final_0712:latest >/dev/null 2>&1; then \
+		if [ -f tmp_images/shopping.tar ]; then \
+			echo "Found partial shopping.tar file, resuming download..."; \
+			wget -c -O tmp_images/shopping.tar http://metis.lti.cs.cmu.edu/webarena-images/shopping_final_0712.tar || (echo "Download failed. You can resume later by running this command again." && exit 1); \
+		else \
+			echo "Downloading shopping image..."; \
+			wget -c -O tmp_images/shopping.tar http://metis.lti.cs.cmu.edu/webarena-images/shopping_final_0712.tar || (echo "Download failed. You can resume later by running this command again." && exit 1); \
+		fi; \
+		echo "Loading shopping image into Docker..."; \
 		docker load < tmp_images/shopping.tar; \
 		rm -f tmp_images/shopping.tar; \
 	else \
@@ -48,7 +54,7 @@ install-benchmark2-image-tars:
 		echo "Shopping container already exists, starting if stopped..."; \
 		docker start shopping 2>/dev/null || true; \
 	fi
-	@if ! docker images | grep -q "shopping_admin_final_0719"; then \
+	@if ! docker image inspect shopping_admin_final_0719:latest >/dev/null 2>&1; then \
 		echo "Downloading shopping_admin image..."; \
 		wget -c -O tmp_images/shopping_admin.tar http://metis.lti.cs.cmu.edu/webarena-images/shopping_admin_final_0719.tar || (echo "Download failed. You can resume later by running this command again." && exit 1); \
 		docker load < tmp_images/shopping_admin.tar; \
@@ -62,7 +68,7 @@ install-benchmark2-image-tars:
 		echo "Shopping_admin container already exists, starting if stopped..."; \
 		docker start shopping_admin 2>/dev/null || true; \
 	fi
-	@if ! docker images | grep -q "postmill-populated-exposed-withimg"; then \
+	@if ! docker image inspect postmill-populated-exposed-withimg:latest >/dev/null 2>&1; then \
 		echo "Downloading forum image..."; \
 		wget -c -O tmp_images/forum.tar http://metis.lti.cs.cmu.edu/webarena-images/postmill-populated-exposed-withimg.tar || (echo "Download failed. You can resume later by running this command again." && exit 1); \
 		docker load < tmp_images/forum.tar; \
@@ -76,7 +82,7 @@ install-benchmark2-image-tars:
 		echo "Forum container already exists, starting if stopped..."; \
 		docker start forum 2>/dev/null || true; \
 	fi
-	@if ! docker images | grep -q "gitlab-populated-final-port8023"; then \
+	@if ! docker image inspect gitlab-populated-final-port8023:latest >/dev/null 2>&1; then \
 		echo "Downloading gitlab image..."; \
 		wget -c -O tmp_images/gitlab.tar http://metis.lti.cs.cmu.edu/webarena-images/gitlab-populated-final-port8023.tar || (echo "Download failed. You can resume later by running this command again." && exit 1); \
 		docker load < tmp_images/gitlab.tar; \
