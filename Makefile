@@ -150,7 +150,7 @@ install-benchmark2:
 install-benchmark6:
 	@mkdir -p $(WEBLINX_PROJECT_DIR)
 	@mkdir -p $(WEBLINX_DATA_DIR)
-	$(PY) scripts/install_weblinx_data.py
+	$(PY) scripts/install_weblinx.py
 
 install-agentbeats:
 	@$(PIP) install git+https://github.com/agentbeats/agentbeats.git@main openai
