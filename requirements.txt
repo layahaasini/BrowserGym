@@ -1,15 +1,14 @@
-# Core BrowserGym packages (editable installs)
--e ./browsergym/core
--e ./browsergym/miniwob
--e ./browsergym/webarena
--e ./browsergym/webarenalite
--e ./browsergym/visualwebarena
--e ./browsergym/experiments
--e ./browsergym/assistantbench
--e ./browsergym/
-
 # Base libraries
-browsergym
+browsergym  # (recommended) everything below
+browsergym-experiments  # experiment utilities (agent, loop, benchmarks) + everything below
+browsergym-core  # core functionalities only (no benchmark, just the openended task)
+browsergym-miniwob  # core + miniwob
+browsergym-webarena  # core + webarena
+browsergym-visualwebarena  # core + visualwebarena
+browsergym-workarena  # core + workarena
+browsergym-assistantbench  # core + assistantbench
+weblinx-browsergym  # core + weblinx
+
 weblinx
 weblinx[all]
 huggingface_hub

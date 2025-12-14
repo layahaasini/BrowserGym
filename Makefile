@@ -10,7 +10,7 @@ install:
 	@echo "--- Configuring environment and installing dependencies ---"
 	@if [ "$$(uname)" = "Linux" ]; then \
 		sudo apt-get update && \
-		sudo apt-get install -y wget xvfb libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libatspi2.0-0 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango-1.0-0 libcairo2 libasound2 docker.io python3-pip python3-venv && \
+		sudo apt-get install -y wget zip unzip xvfb libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libatspi2.0-0 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango-1.0-0 libcairo2 libasound2  python3-pip python3-venv && \
 		sudo apt install -y python3-pip python3-venv docker-compose && \
 		sudo usermod -aG docker $$USER; \
 	else \
@@ -23,7 +23,7 @@ install:
 	@$(PY) -m playwright install chromium
 	@echo "Environment setup complete."
 
-install-benchmark1:
+install-bm-miniwob:
 	@if [ ! -d "miniwob-plusplus" ]; then \
 		git clone https://github.com/Farama-Foundation/miniwob-plusplus.git; \
 	fi
@@ -31,7 +31,7 @@ install-benchmark1:
 	echo "MINIWOB_URL=\"file://$(shell pwd)/miniwob-plusplus/miniwob/html/miniwob/\"" >> .env
 	@echo "MiniWob++ setup complete."
 
-install-benchmark2-image-tars:
+install-bm-webarena-image-tars:
 	mkdir -p tmp_images
 	@echo "--- Installing WebArena Docker images (will skip already installed) ---"
 	@if ! docker image inspect shopping_final_0712:latest >/dev/null 2>&1; then \
@@ -97,8 +97,14 @@ install-benchmark2-image-tars:
 		docker start gitlab 2>/dev/null || true; \
 	fi
 	@if ! docker ps -a | grep -q "wikipedia$$"; then \
+		echo "--- Setting up Wikipedia ---"; \
+		mkdir -p wikipedia_data; \
+		if [ ! -f wikipedia_data/wikipedia_en_all_maxi_2022-05.zim ]; then \
+			echo "Downloading Wikipedia ZIM file (95GB)..."; \
+			wget -c -O wikipedia_data/wikipedia_en_all_maxi_2022-05.zim http://metis.lti.cs.cmu.edu/webarena-images/wikipedia_en_all_maxi_2022-05.zim; \
+		fi; \
 		echo "Starting wikipedia container..."; \
-		docker run -d --name wikipedia -p 8888:80 --mount type=tmpfs,destination=/data ghcr.io/kiwix/kiwix-serve:3.3.0 https://metis.lti.cs.cmu.edu/webarena-images/wikipedia_en_all_maxi_2022-05.zim || echo "Wikipedia container already exists or failed to start"; \
+		docker run -d --name wikipedia -p 8888:80 -v $(shell pwd)/wikipedia_data:/data ghcr.io/kiwix/kiwix-serve:3.3.0 /data/wikipedia_en_all_maxi_2022-05.zim || echo "Wikipedia container failed to start"; \
 	else \
 		echo "Wikipedia container already exists, starting if stopped..."; \
 		docker start wikipedia 2>/dev/null || true; \
@@ -107,14 +113,14 @@ install-benchmark2-image-tars:
 	@echo "✅ WebArena images installation complete (skipped already installed images)"
 
 
-install-benchmark2:
+install-bm-webarena:
 	@echo "--- Starting Docker containers ---"
 	@docker login --username $(DOCKER_USERNAME) --password $(DOCKER_PASSWORD)
 	docker start gitlab
 	docker start shopping
 	docker start shopping_admin
 	docker start forum
-	docker start kiwix33
+	docker start wikipedia
 	@echo "--- Waiting for containers to start ---"
 	@sleep 60
 	@echo "--- Applying IP Table Rules if services are not accessible externally ---"
@@ -138,16 +144,40 @@ install-benchmark2:
 	docker exec gitlab sed -i "s|^external_url.*|external_url 'http://$(HOSTNAME):8023'|" /etc/gitlab/gitlab.rb
 	docker exec gitlab gitlab-ctl reconfigure
 	@echo "--- Testing Services ---"
-	curl -s -o /dev/null -w "Shopping (7770): %{http_code}\n" http://$(HOSTNAME):7770
-	curl -s -o /dev/null -w "Shopping Admin (7780): %{http_code}\n" http://$(HOSTNAME):7780
-	curl -s -o /dev/null -w "Forum (9999): %{http_code}\n" http://$(HOSTNAME):9999
-	curl -s -o /dev/null -w "Wikipedia (8888): %{http_code}\n" http://$(HOSTNAME):8888
-	curl -s -o /dev/null -w "Map (3000): %{http_code}\n" http://$(HOSTNAME):3000
-	curl -s -o /dev/null -w "GitLab (8023): %{http_code}\n" http://$(HOSTNAME):8023
-	curl -s -o /dev/null -w "Map tile: %{http_code}\n" http://$(HOSTNAME):3000/tile/0/0/0.png
+	curl -s -o /dev/null -w "Shopping (7770): %{http_code}\n" http://localhost:7770
+	curl -s -o /dev/null -w "Shopping Admin (7780): %{http_code}\n" http://localhost:7780
+	curl -s -o /dev/null -w "Forum (9999): %{http_code}\n" http://localhost:9999
+	curl -s -o /dev/null -w "Wikipedia (8888): %{http_code}\n" http://localhost:8888
+	# curl -s -o /dev/null -w "Map (3000): %{http_code}\n" http://localhost:3000
+	curl -s -o /dev/null -w "GitLab (8023): %{http_code}\n" http://localhost:8023
+	# curl -s -o /dev/null -w "Map tile: %{http_code}\n" http://localhost:3000/tile/0/0/0.png
 	@echo "WebArena setup complete."
 
-install-benchmark6:
+install-bm-visualwebarena:
+	@echo "--- Setting up VisualWebArena (Classifieds) ---"
+	@mkdir -p classifieds_workspace
+	@if [ ! -f classifieds_workspace/classifieds.zip ]; then \
+		echo "Downloading Classifieds docker compose..."; \
+		wget -c -O classifieds_workspace/classifieds.zip https://archive.org/download/classifieds_docker_compose/classifieds_docker_compose.zip; \
+	fi
+	@if [ ! -d classifieds_workspace/classifieds_docker_compose ]; then \
+		echo "Unzipping Classifieds..."; \
+		unzip -o classifieds_workspace/classifieds.zip -d classifieds_workspace; \
+	fi
+	@echo "Configuring Classifieds..."
+	# Replace default URL with localhost/hostname port 9980
+	sed -i 's|CLASSIFIEDS=http://.*|CLASSIFIEDS=http://$(HOSTNAME):9980/|' classifieds_workspace/classifieds_docker_compose/docker-compose.yml
+	@echo "Starting Classifieds containers..."
+	cd classifieds_workspace/classifieds_docker_compose && docker compose up -d
+	@echo "Waiting for DB to initialize (30s)..."
+	@sleep 30
+	@echo "Initializing Database Content..."
+	cd classifieds_workspace/classifieds_docker_compose && docker compose exec -T db mysql -u root -ppassword osclass < mysql/osclass_craigslist.sql
+	@echo "✅ VisualWebArena (Classifieds) setup complete."
+	@echo "Testing Classifieds (9980)..."
+	curl -s -o /dev/null -w "Classifieds (9980): %{http_code}\n" http://localhost:9980
+
+install-bm-weblinx:
 	@mkdir -p $(WEBLINX_PROJECT_DIR)
 	@mkdir -p $(WEBLINX_DATA_DIR)
 	$(PY) weblinx/install_weblinx.py
@@ -191,6 +221,24 @@ demo:
 			done; \
 		fi
 
+demo-bm-miniwob:
+	make demo TASKS="miniwob.click-test"
+
+demo-bm-webarena:
+	make demo TASKS="webarena.4"
+
+demo-bm-visualwebarena:
+	make demo TASKS="visualwebarena.398"
+
+demo-bm-workarena:
+	make demo TASKS="workarena.servicenow.order-standard-laptop"
+
+demo-bm-assistantbench:
+	make demo TASKS="assistantbench.validation.3"
+
+demo-bm-weblinx:
+	make demo TASKS="weblinx.dhbqtap.67"
+
 GREEN_AGENT_PATH ?= demo_agent/agent.py
 GREEN_MAX_STEPS ?= 50
 
@@ -232,13 +280,21 @@ clean-miniwob:
 help:
 	@echo "Available targets:"
 	@echo "  install                          - Install project dependencies"
-	@echo "  install-benchmark1               - Install MiniWob++"
-	@echo "  install-benchmark2-image-tars    - Install WebArena image tars if not configuring with AWS"
-	@echo "  install-benchmark2               - Install WebArena"
+	@echo "  install-bm-miniwob               - Install MiniWob++"
+	@echo "  install-bm-webarena-image-tars   - Install WebArena image tars if not configuring with AWS"
+	@echo "  install-bm-webarena              - Install WebArena"
+	@echo "  install-bm-visualwebarena        - Install VisualWebArena (Classifieds)"
+	@echo "  install-bm-weblinx               - Install WebLinx"
 	@echo "  install-agentbeats               - Install agentbeats"
 	@echo "  register-agent                   - Register your agent onto the Agentbeats platform"
 	@echo "  register-battle                  - Register your agent for an Agentbeats battle"
 	@echo "  demo                             - Run demo agent"
+	@echo "  demo-bm-miniwob                  - Run MiniWoB++ demo"
+	@echo "  demo-bm-webarena                 - Run WebArena demo"
+	@echo "  demo-bm-visualwebarena           - Run VisualWebArena demo"
+	@echo "  demo-bm-workarena                - Run WorkArena demo"
+	@echo "  demo-bm-assistantbench           - Run AssistantBench demo"
+	@echo "  demo-bm-weblinx                  - Run WebLinx demo"
 	@echo "  green-workarena                  - Run Green Evaluator on a WorkArena task (set TASK=...)"
 	@echo "  green-webarena                   - Run Green Evaluator on a WebArena task (set TASK=...)"
 	@echo "  test-core                        - Run core tests"
