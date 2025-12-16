@@ -1,11 +1,11 @@
 {
   "name": "BrowserGym Green Evaluator",
-  "description": "A green agent that evaluates web agents on BrowserGym benchmarks including MiniWoB, WebArena, and VisualWebArena",
-  "url": "https://down-rock-hiking-decades.trycloudflare.com/",
+  "description": "A green agent that evaluates web agents on BrowserGym benchmarks including MiniWoB, WorkArena, and WebArena",
+  "url": "http://34.148.1.181:8000",
   "capabilities": [
     "miniwob_benchmark",
+    "workarena_benchmark",
     "webarena_benchmark",
-    "visualwebarena_benchmark",
     "agent_evaluation"
   ]
 }

@@ -693,6 +693,11 @@ if A2A_AVAILABLE:
                         content={"error": str(e)}
                     )
             
+            @self.app.get("/status")
+            async def status():
+                """Health check endpoint"""
+                return {"status": "healthy"}
+
             @self.app.get("/health")
             async def health():
                 """Health check endpoint"""
@@ -1028,7 +1033,7 @@ def main():
         evaluator.logger.info(f"Agent card URL: {card_url}")
         evaluator.logger.info(f"Agent card saved to: {args.card_path}")
         
-        uvicorn.run(server.app, host=args.host, port=args.port, log_level="info")
+        uvicorn.run(server.app, host=args.host, port=args.port, log_level="debug")
         return
     
     # Standalone mode (original functionality)
