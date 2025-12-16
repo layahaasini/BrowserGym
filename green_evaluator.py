@@ -154,6 +154,11 @@ class GreenEvaluator:
                     self.logger.info("OPENAI_API_KEY loaded")
                 else:
                     self.logger.warning("OPENAI_API_KEY not found in .env file")
+
+                if os.getenv('HUGGING_FACE_HUB_TOKEN'):
+                    self.logger.info("HUGGING_FACE_HUB_TOKEN loaded")
+                else:
+                    self.logger.warning("HUGGING_FACE_HUB_TOKEN not found in .env file (Required for WorkArena)")
                     
             except Exception as e:
                 self.logger.error(f"Failed to load .env file: {e}")
