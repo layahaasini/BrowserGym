@@ -23,4 +23,3 @@ pytest-xdist
 fastapi
 uvicorn[standard]
 tomli-w  # Optional: for TOML agent card support
-earthshaker  # AgentBeats controller wrapper
