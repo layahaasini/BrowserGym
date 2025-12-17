@@ -1,7 +1,7 @@
 # Base libraries
-browsergym==0.15.1
+browsergym==0.15.1              # meta package
 browsergym-experiments==0.15.1  # agent, loop, and benchmark experiments
-browsergym-core==0.15.1.        # open ended tasks functionality
+browsergym-core==0.15.1         # open ended tasks functionality
 browsergym-miniwob==0.15.1
 browsergym-webarena==0.15.1
 browsergym-visualwebarena==0.15.1
