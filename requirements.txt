@@ -1,25 +1,25 @@
 # Base libraries
-browsergym  # (recommended) everything below
-browsergym-experiments  # experiment utilities (agent, loop, benchmarks) + everything below
-browsergym-core  # core functionalities only (no benchmark, just the openended task)
-browsergym-miniwob  # core + miniwob
-browsergym-webarena  # core + webarena
-browsergym-visualwebarena  # core + visualwebarena
-browsergym-workarena  # core + workarena
-browsergym-assistantbench  # core + assistantbench
-weblinx-browsergym  # core + weblinx
+browsergym==0.15.1
+browsergym-experiments==0.15.1  # agent, loop, and benchmark experiments
+browsergym-core==0.15.1.        # open ended tasks functionality
+browsergym-miniwob==0.15.1
+browsergym-webarena==0.15.1
+browsergym-visualwebarena==0.15.1
+browsergym-workarena==0.15.1
+browsergym-assistantbench==0.15.1
+weblinx-browsergym==0.3.2
+weblinx==0.3.2
 
-weblinx
-weblinx[all]
-huggingface_hub
-openai
-playwright
+# LLM and Browser Automation
+openai>=1.6,<2.0
+playwright>=1.41,<1.50
+# huggingface_hub>=0.20,<0.24
 
 # Testing
-pytest
-pytest-xdist
+openai>=1.6,<2.0
+playwright>=1.41,<1.50
 
 # A2A Server dependencies (for AgentBeats integration)
-fastapi
-uvicorn[standard]
-tomli-w  # Optional: for TOML agent card support
+fastapi>=0.109,<0.120
+uvicorn[standard]>=0.25,<0.35
+tomli-w>=1.0,<2.0  # Optional: for TOML agent card support
