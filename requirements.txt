@@ -1,23 +1,23 @@
 # Base libraries
-browsergym==0.15.1              # meta package
-browsergym-experiments==0.15.1  # agent, loop, and benchmark experiments
-browsergym-core==0.15.1         # open ended tasks functionality
-browsergym-miniwob==0.15.1
-browsergym-webarena==0.15.1
-browsergym-visualwebarena==0.15.1
-browsergym-workarena==0.15.1
-browsergym-assistantbench==0.15.1
-weblinx-browsergym==0.3.2
-weblinx==0.3.2
+browsergym==0.14.2              # meta package
+browsergym-experiments==0.14.2  # agent, loop, and benchmark experiments
+browsergym-core==0.14.2         # open ended tasks functionality
+browsergym-miniwob==0.14.2
+browsergym-webarena==0.14.2
+browsergym-visualwebarena==0.14.2
+browsergym-workarena==0.14.2
+browsergym-assistantbench==0.14.2
+weblinx-browsergym==0.3.0
+# weblinx==0.3.2
 
 # LLM and Browser Automation
-openai>=1.6,<2.0
-playwright>=1.41,<1.50
+playwright>=1.40
+openai>=1.0
 # huggingface_hub>=0.20,<0.24
 
 # Testing
-openai>=1.6,<2.0
-playwright>=1.41,<1.50
+pytest
+pytest-xdist
 
 # A2A Server dependencies (for AgentBeats integration)
 fastapi>=0.109,<0.120
