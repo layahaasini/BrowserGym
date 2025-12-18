@@ -6,7 +6,7 @@ from green_evaluator import GreenEvaluator, get_task_list_by_benchmark, A2A_AVAI
 def main():
     parser = argparse.ArgumentParser(description="Run Benchmark Suite")
     parser.add_argument("--agent_path", type=str, required=True, help="Path to the agent file")
-    parser.add_argument("--benchmark", type=str, required=True, choices=["miniwob", "workarena", "webarena"], help="Benchmark suite to run")
+    parser.add_argument("--benchmark", type=str, required=True, choices=["miniwob", "workarena", "webarena", "visualwebarena"], help="Benchmark suite to run")
     parser.add_argument("--max_steps", type=int, default=50, help="Max steps per task")
     parser.add_argument("--max_tasks", type=int, default=None, help="Limit number of tasks (useful for WebArena)")
     
