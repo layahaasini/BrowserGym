@@ -617,15 +617,10 @@ def get_task_list_by_benchmark(benchmark: str) -> List[str]:
 
     elif benchmark.lower() == "visualwebarena":
         try:
-            from browsergym.visualwebarena import get_task_list
-            return get_task_list()
-        except ImportError:
-             # Fallback
-            try:
-                from browsergym.visualwebarena.tasks import get_task_list
-                return get_task_list()
-            except ImportError as e:
-                raise ImportError(f"Could not import get_task_list from browsergym.visualwebarena: {e}")
+            from browsergym.visualwebarena import ALL_VISUALWEBARENA_TASK_IDS
+            return ALL_VISUALWEBARENA_TASK_IDS
+        except ImportError as e:
+            raise ImportError(f"Could not import ALL_VISUALWEBARENA_TASK_IDS from browsergym.visualwebarena: {e}")
     else:
         raise ValueError(f"Unknown benchmark: {benchmark}. Supported: 'miniwob', 'workarena', 'webarena', 'visualwebarena'")
 
