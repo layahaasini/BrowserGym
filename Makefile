@@ -280,15 +280,15 @@ test-green:
 	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
 	. .env && $(PY) -m pytest -v ./tests/green_evaluator
 
-test-all:
-	@echo "--- Running all tests ---"
-	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
-	. .env && $(PY) -m pytest -n auto ./tests
-
 test-benchmarks:
 	@echo "--- Running tests for installed benchmarks only ---"
 	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
 	. .env && $(PY) -m pytest -n auto ./tests/core ./tests/green_evaluator ./tests/miniwob ./tests/assistantbench ./tests/experiments -v
+
+test-all:
+	@echo "--- Running all tests ---"
+	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
+	. .env && $(PY) -m pytest -n auto ./tests
 
 clean-bm-miniwob:
 	@echo "--- Cleaning MiniWoB++ installation ---"
