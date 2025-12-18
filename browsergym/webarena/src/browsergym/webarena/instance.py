@@ -196,10 +196,10 @@ class WebArenaInstance:
                 username = self.credentials[site]["username"]
                 password = self.credentials[site]["password"]
 
-                page.goto(url)
-                page.get_by_label("Username").fill(username)
-                page.get_by_label("Password").fill(password)
-                page.get_by_role("button", name="Sign in").click()
+                page.goto(url, timeout=60000)
+                page.get_by_label("Username").fill(username, timeout=30000)
+                page.get_by_label("Password").fill(password, timeout=30000)
+                page.get_by_role("button", name="Sign in").click(timeout=30000)
 
             case "wikipedia":
                 page.goto(url)
