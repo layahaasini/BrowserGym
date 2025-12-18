@@ -241,13 +241,15 @@ make install-bm-webarena
 Adds to `.env`:
 ```bash
 WA_SHOPPING="http://${HOSTNAME}:7770"
-WA_SHOPPING_ADMIN="http://${HOSTNAME}:7771"
+WA_SHOPPING_ADMIN="http://${HOSTNAME}:7780/admin"
 WA_REDDIT="http://${HOSTNAME}:9999"
-WA_GITLAB="http://${HOSTNAME}:9980"
-WA_WIKIPEDIA="http://${HOSTNAME}:8888"
+WA_GITLAB="http://${HOSTNAME}:8023"
 WA_MAP="http://${HOSTNAME}:4444"
+WA_WIKIPEDIA="http://${HOSTNAME}:8888/wikipedia_en_all_maxi_2022-05/A/User:The_other_Kiwix_guy/Landing"
 WA_HOMEPAGE="http://${HOSTNAME}:4399"
 ```
+
+**Note**: The Makefile uses these `WA_*` variables directly when configuring Docker containers.
 
 **Troubleshooting**:
 - If downloads fail, re-run `make install-bm-webarena-image-tars` (resumes from where it stopped)
@@ -323,15 +325,22 @@ python scripts/download_data.py
 
 **Note**: WebLINX integration is experimental and may require additional BrowserGym updates.
 
-### 5. Load Environment
+### 5. Verify Environment Setup
+
+Your `.env` should now contain variables with dynamic references:
 ```bash
-source .env
+HOSTNAME=<your-ip>
+MINIWOB_URL="file:///${PWD}/miniwob-plusplus/miniwob/html/miniwob/"
+WA_SHOPPING="http://${HOSTNAME}:7770"
 ```
 
-Verify:
+The Makefile automatically sources `.env` before running demos and tests, so you don't need to manually run `source .env`.
+
+To manually verify environment variables:
 ```bash
-echo $MINIWOB_URL  # Should show path
-echo $OPENAI_API_KEY  # Should show key
+source .env
+echo $MINIWOB_URL  # Should show expanded path
+echo $WA_SHOPPING  # Should show expanded URL
 ```
 
 ---
@@ -339,6 +348,8 @@ echo $OPENAI_API_KEY  # Should show key
 ## Using the System
 
 ### Evaluate White Agent with Green Agent
+
+The Makefile automatically sources `.env` before running, so environment variables are available.
 
 **Single task evaluation**:
 ```bash
@@ -350,7 +361,7 @@ python green_evaluator.py --agent_path demo_agent/agent.py --task miniwob.click-
 python green_evaluator.py --agent_path white_agent/white_agent.py
 ```
 
-**Using make commands**:
+**Using make commands** (automatically sources .env):
 ```bash
 # WorkArena
 make green-workarena TASK=workarena.servicenow.order-standard-laptop GREEN_AGENT_PATH=demo_agent/agent.py
@@ -382,10 +393,10 @@ Exp dir: green_evaluation_results/eval_miniwob.click-dialog_1234567890/
 
 ### Run White Agent Directly (No Evaluation)
 
-Test white agents without metrics collection:
+Test white agents without metrics collection. The Makefile automatically sources `.env`:
 
 ```bash
-# Single task
+# Single task (automatically sources .env)
 make demo TASKS="miniwob.click-test"
 
 # Multiple tasks
@@ -447,7 +458,7 @@ python green_evaluator.py --agent_path my_agent.py --task miniwob.click-test
 
 ## Test the System
 
-Verify green agent and benchmarks work correctly:
+Verify green agent and benchmarks work correctly. All test commands automatically source `.env`:
 
 ```bash
 # Test green agent functionality (29 tests)
@@ -456,9 +467,14 @@ make test-green
 # Test core BrowserGym (benchmark environments)
 make test-core
 
-# Test everything
+# Test installed benchmarks only (skips WebArena/VisualWebArena if not installed)
+make test-benchmarks
+
+# Test everything (includes WebArena/VisualWebArena - will fail if not installed)
 make test-all
 ```
+
+**Recommended**: Use `make test-benchmarks` to test only installed benchmarks.
 
 **Test categories**:
 - **Initialization**: Green agent starts correctly
@@ -550,26 +566,38 @@ BrowserGym/
 ## Configuration Reference
 
 ### .env File
+
+Variables use `${HOSTNAME}` and `${PWD}` for dynamic expansion when sourced:
+
 ```bash
-# Required
-OPENAI_API_KEY="sk-proj-..."
+# General
 HOSTNAME=<EXTERNAL_IP or localhost>
-
-# MiniWoB
-MINIWOB_URL="file:///<PWD>/miniwob-plusplus/miniwob/html/miniwob/"
-
-# WebArena
+OPENAI_API_KEY="sk-proj-..."
 DOCKER_USERNAME=<username>
 DOCKER_PASSWORD=<password>
+
+# MiniWoB (uses ${PWD} for dynamic path)
+MINIWOB_URL="file:///${PWD}/miniwob-plusplus/miniwob/html/miniwob/"
+
+# WebArena (uses ${HOSTNAME} for dynamic URLs)
 WA_SHOPPING="http://${HOSTNAME}:7770"
-WA_SHOPPING_ADMIN="http://${HOSTNAME}:7771"
+WA_SHOPPING_ADMIN="http://${HOSTNAME}:7780/admin"
 WA_REDDIT="http://${HOSTNAME}:9999"
-WA_GITLAB="http://${HOSTNAME}:9980"
-WA_WIKIPEDIA="http://${HOSTNAME}:8888"
+WA_GITLAB="http://${HOSTNAME}:8023"
+WA_MAP="http://${HOSTNAME}:4444"
+WA_WIKIPEDIA="http://${HOSTNAME}:8888/wikipedia_en_all_maxi_2022-05/A/User:The_other_Kiwix_guy/Landing"
+WA_HOMEPAGE="http://${HOSTNAME}:4399:"
+WA_FULL_RESET=""
 
 # VisualWebArena
+DATASET=visualwebarena
 VWA_CLASSIFIEDS="http://${HOSTNAME}:9980"
 VWA_CLASSIFIEDS_RESET_TOKEN="4b61655535e7ed388f0d40a93600254c"
+VWA_SHOPPING="http://${HOSTNAME}:7770"
+VWA_REDDIT="http://${HOSTNAME}:9999"
+VWA_WIKIPEDIA="http://${HOSTNAME}:8888"
+VWA_HOMEPAGE="http://${HOSTNAME}:80"
+VWA_FULL_RESET=""
 
 # WorkArena
 SNOW_INSTANCE_URL="https://instance.service-now.com"
@@ -579,7 +607,15 @@ SNOW_INSTANCE_PWD="password"
 # WebLINX
 WEBLINX_PROJECT_DIR=${PWD}/weblinx/modeling
 WEBLINX_DATA_DIR=${PWD}/weblinx/modeling/wl_data
+
+# AgentBeats
+AGENT_HOST=${HOSTNAME}
+AGENT_PORT=8000
+LAUNCHER_HOST=${HOSTNAME}
+LAUNCHER_PORT=8080
 ```
+
+**Note**: The Makefile automatically sources `.env` before running demos, tests, and evaluations, so you don't need to manually run `source .env` each time.
 
 ### Green Agent Arguments
 ```bash

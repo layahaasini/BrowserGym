@@ -29,7 +29,7 @@ install-bm-miniwob:
 		git clone https://github.com/Farama-Foundation/miniwob-plusplus.git; \
 	fi
 	git -C miniwob-plusplus reset --hard 7fd85d71a4b60325c6585396ec4f48377d049838
-	@printf "\n# Benchmark 1: MiniWoB++\nMINIWOB_URL=file://$(shell pwd)/miniwob-plusplus/miniwob/html/miniwob/" >> .env
+	@printf "\n# Benchmark 1: MiniWoB++\nMINIWOB_URL=\"file://\$${PWD}/miniwob-plusplus/miniwob/html/miniwob/\"" >> .env
 	@echo "MiniWob++ setup complete."
 
 install-bm-webarena-image-tars:
@@ -115,7 +115,7 @@ install-bm-webarena-image-tars:
 
 
 install-bm-webarena:
-	@printf "\n# Benchmark 2: WebArena\nWA_SHOPPING=\"http://$${HOSTNAME}:7770\"\nWA_SHOPPING_ADMIN=\"http://$${HOSTNAME}:7771\"\nWA_GITLAB=\"http://$${HOSTNAME}:9980\"\nWA_REDDIT=\"http://$${HOSTNAME}:9999\"\nWA_WIKIPEDIA=\"http://$${HOSTNAME}:8888\"\nWA_FULL_RESET=\"\"" >> .env
+	@printf "\n# Benchmark 2: WebArena\nWA_SHOPPING=\"http://\$${HOSTNAME}:7770\"\nWA_SHOPPING_ADMIN=\"http://\$${HOSTNAME}:7780/admin\"\nWA_REDDIT=\"http://\$${HOSTNAME}:9999\"\nWA_GITLAB=\"http://\$${HOSTNAME}:8023\"\nWA_MAP=\"http://\$${HOSTNAME}:4444\"\nWA_WIKIPEDIA=\"http://\$${HOSTNAME}:8888/wikipedia_en_all_maxi_2022-05/A/User:The_other_Kiwix_guy/Landing\"\nWA_HOMEPAGE=\"http://\$${HOSTNAME}:4399:\"\nWA_FULL_RESET=\"\"\n# Optional Additional Configs\n# MAP_BACKEND_IP=\"http://\$${HOSTNAME}:3000\"" >> .env
 	@echo "--- Starting Docker containers ---"
 	@docker login --username $(DOCKER_USERNAME) --password $(DOCKER_PASSWORD)
 	docker start gitlab
@@ -133,17 +133,17 @@ install-bm-webarena:
 	sudo iptables -t nat -A PREROUTING -p tcp --dport 9999 -j REDIRECT --to-port 9999
 	sudo iptables -t nat -A PREROUTING -p tcp --dport 8023 -j REDIRECT --to-port 8023
 	@echo "--- Configuring Shopping Website ---"
-	docker exec shopping /var/www/magento2/bin/magento setup:store-config:set --base-url=$(WA_SHOPPING)
-	docker exec shopping mysql -u magentouser -pMyPassword magentodb -e 'UPDATE core_config_data SET value='$${WA_SHOPPING}/' WHERE path = "web/secure/base_url";'
+	. .env && docker exec shopping /var/www/magento2/bin/magento setup:store-config:set --base-url="$$WA_SHOPPING"
+	. .env && docker exec shopping mysql -u magentouser -pMyPassword magentodb -e "UPDATE core_config_data SET value='$$WA_SHOPPING/' WHERE path = 'web/secure/base_url';"
 	docker exec shopping /var/www/magento2/bin/magento cache:flush
 	@echo "--- Configuring Shopping Admin Website ---"
 	docker exec shopping_admin php /var/www/magento2/bin/magento config:set admin/security/password_is_forced 0
 	docker exec shopping_admin php /var/www/magento2/bin/magento config:set admin/security/password_lifetime 0
-	docker exec shopping_admin /var/www/magento2/bin/magento setup:store-config:set --base-url=$(WA_SHOPPING_ADMIN)
-	docker exec shopping_admin mysql -u magentouser -pMyPassword magentodb -e 'UPDATE core_config_data SET value='$${WA_SHOPPING_ADMIN}/' WHERE path = "web/secure/base_url";'
+	. .env && docker exec shopping_admin /var/www/magento2/bin/magento setup:store-config:set --base-url="$$WA_SHOPPING_ADMIN"
+	. .env && docker exec shopping_admin mysql -u magentouser -pMyPassword magentodb -e "UPDATE core_config_data SET value='$$WA_SHOPPING_ADMIN/' WHERE path = 'web/secure/base_url';"
 	docker exec shopping_admin /var/www/magento2/bin/magento cache:flush
 	@echo "--- Configuring GitLab Website ---"
-	docker exec gitlab sed -i "s|^external_url.*|external_url $(WA_GITLAB)|" /etc/gitlab/gitlab.rb
+	. .env && docker exec gitlab sed -i "s|^external_url.*|external_url $$WA_GITLAB|" /etc/gitlab/gitlab.rb
 	docker exec gitlab gitlab-ctl reconfigure
 	@echo "--- Testing Services ---"
 	curl -s -o /dev/null -w "Shopping (7770): %{http_code}\n" http://localhost:7770
@@ -157,7 +157,7 @@ install-bm-webarena:
 
 install-bm-visualwebarena:
 	@echo "--- Setting up VisualWebArena (Classifieds) ---"
-	@echo -e "\n# Benchmark 3: VisualWebArena\nDATASET=visualwebarena\nVWA_CLASSIFIEDS=\"http://${HOSTNAME}:9980\"\nVWA_CLASSIFIEDS_RESET_TOKEN=\"4b61655535e7ed388f0d40a93600254c\"" >> .env
+	@printf "\n# Benchmark 3: VisualWebArena\nDATASET=visualwebarena\nVWA_CLASSIFIEDS=\"http://\$${HOSTNAME}:9980\"\nVWA_CLASSIFIEDS_RESET_TOKEN=\"4b61655535e7ed388f0d40a93600254c\"\nVWA_SHOPPING=\"http://\$${HOSTNAME}:7770\"\nVWA_REDDIT=\"http://\$${HOSTNAME}:9999\"\nVWA_WIKIPEDIA=\"http://\$${HOSTNAME}:8888\"\nVWA_HOMEPAGE=\"http://\$${HOSTNAME}:80\"\nVWA_FULL_RESET=\"\"\n# WA_FULL_RESET=\"http://\$${HOSTNAME}:7565\"" >> .env
 	@mkdir -p classifieds_workspace
 	@if [ ! -f classifieds_workspace/classifieds.zip ]; then \
 		echo "Downloading Classifieds docker compose..."; \
@@ -182,7 +182,7 @@ install-bm-visualwebarena:
 
 install-agentbeats:
     @$(PIP) install git+https://github.com/agentbeats/agentbeats.git@main
-	@printf "\n# AgentBeats\nAGENT_HOST=%s\nAGENT_PORT=8000\nLAUNCHER_HOST=%s\nLAUNCHER_PORT=8080\n" "$${HOSTNAME}" "$${HOSTNAME}" >> .env
+	@printf "\n# AgentBeats\n# If running locally instead of remotely (SSH on a VM), both hosts are localhost\nAGENT_HOST=\$${HOSTNAME}\nAGENT_PORT=8000\nLAUNCHER_HOST=\$${HOSTNAME}\nLAUNCHER_PORT=8080\n" >> .env
 
 register-agent:
 	wget -O red_agent_card.toml https://raw.githubusercontent.com/agentbeats/agentbeats/main/scenarios/templates/template_tensortrust_red_agent/red_agent_card.toml
@@ -204,8 +204,9 @@ register-battle:
 
 demo:
 	@echo "--- Running demo agent with tasks ---"
+	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
 	cd demo_agent && \
-		export $$(grep -v '^#' ../.env | xargs); \
+		. ../.env && \
 		if [ -z "$(TASKS)" ]; then \
 			echo "No TASKS specified — running open-ended demo agent"; \
 			xvfb-run -a $(PY) run_demo.py; \
@@ -246,8 +247,9 @@ green-workarena:
 		echo "Please provide TASK=workarena.servicenow.<task-name>"; \
 		exit 1; \
 	fi
+	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
 	@echo "--- Running Green Evaluator on WorkArena task: $(TASK) ---"
-	export $$(grep -v '^#' .env | xargs); \
+	. .env && \
 	$(PY) green_evaluator.py \
 		--agent_path $(GREEN_AGENT_PATH) \
 		--task $(TASK) \
@@ -258,10 +260,11 @@ green-webarena:
 		echo "Please provide TASK=webarena.<task-id> (e.g., TASK=webarena.4)"; \
 		exit 1; \
 	fi
+	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
 	@echo "--- Running Green Evaluator on WebArena task: $(TASK) ---"
 	@echo "Note: WebArena requires Docker containers running on your GCP VM"
 	@echo "Make sure WA_* environment variables are set in .env pointing to your VM"
-	export $$(grep -v '^#' .env | xargs); \
+	. .env && \
 	$(PY) green_evaluator.py \
 		--agent_path $(GREEN_AGENT_PATH) \
 		--task $(TASK) \
@@ -269,19 +272,23 @@ green-webarena:
 
 test-core:
 	@echo "--- Running core tests ---"
-	$(PY) -m pytest -n auto ./tests/core
+	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
+	. .env && $(PY) -m pytest -n auto ./tests/core
 
 test-green:
 	@echo "--- Running Green Evaluator tests ---"
-	$(PY) -m pytest -v ./tests/green_evaluator
+	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
+	. .env && $(PY) -m pytest -v ./tests/green_evaluator
 
 test-all:
 	@echo "--- Running all tests ---"
-	$(PY) -m pytest -n auto ./tests
+	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
+	. .env && $(PY) -m pytest -n auto ./tests
 
 test-benchmarks:
 	@echo "--- Running tests for installed benchmarks only ---"
-	$(PY) -m pytest -n auto ./tests/core ./tests/green_evaluator ./tests/miniwob ./tests/assistantbench ./tests/experiments -v
+	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
+	. .env && $(PY) -m pytest -n auto ./tests/core ./tests/green_evaluator ./tests/miniwob ./tests/assistantbench ./tests/experiments -v
 
 clean-bm-miniwob:
 	@echo "--- Cleaning MiniWoB++ installation ---"
