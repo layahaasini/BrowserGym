@@ -196,21 +196,31 @@ class WebArenaInstance:
                 username = self.credentials[site]["username"]
                 password = self.credentials[site]["password"]
 
-                logger.info(f"Navigating to {url} with 2 minute timeout...")
-                page.goto(url, timeout=120000)
                 logger.info(f"Page title: {page.title()}")
                 
-                # Try generic selectors which are more robust
+                # Method 3: IDs (Most reliable for Admin Panel)
                 try:
-                    page.locator("input[name='login[username]']").fill(username, timeout=30000)
-                    page.locator("input[name='login[password]']").fill(password, timeout=30000)
-                    page.locator(".action.login").click(timeout=30000)
-                except:
-                    # Fallback to labels if generic fails
-                    logger.warning("Generic selectors failed, trying labels...")
-                    page.get_by_label("Username").fill(username, timeout=60000)
-                    page.get_by_label("Password").fill(password, timeout=60000)
-                    page.get_by_role("button", name="Sign in").click(timeout=60000)
+                    # Wait for explicitly any text box to ensure loading
+                    page.wait_for_selector("input[type='text'], input[type='email']", timeout=60000)
+                    
+                    # Try standarad Magento Admin IDs
+                    if page.locator("#username").is_visible():
+                        page.fill("#username", username)
+                        page.fill("#login", password)
+                    else:
+                        # Fallback for older versions
+                        page.fill("input[name*='user']", username)
+                        page.fill("input[name*='pass']", password)
+
+                    page.press("body", "Enter") # Press enter instead of finding button
+                    time.sleep(5) # Wait for submission
+                    
+                except Exception as e:
+                    logger.error(f"Login failed: {e}")
+                    # Last ditch effort
+                    page.get_by_label("Username").fill(username, timeout=30000)
+                    page.get_by_label("Password").fill(password, timeout=30000)
+                    page.get_by_role("button", name="Sign in").click(timeout=30000)
 
             case "wikipedia":
                 page.goto(url)
