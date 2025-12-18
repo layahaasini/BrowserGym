@@ -4,6 +4,23 @@ A system for evaluating web agents. The **green agent** evaluates **white agents
 
 ---
 
+---
+
+## Table of Contents
+
+1. [Architecture](#architecture)
+   - [Green Agent (Evaluator)](#green-agent-evaluator)
+   - [White Agent (Agent Under Test)](#white-agent-agent-under-test)
+2. [Benchmarks](#benchmarks)
+3. [Setup](#setup)
+4. [Using the System](#using-the-system)
+   - [Evaluate White Agent](#evaluate-white-agent-with-green-agent)
+   - [Run Demo (Fast Test)](#run-white-agent-directly-no-evaluation)
+5. [Configuration Reference](#configuration-reference)
+6. [Ecosystem](#ecosystem)
+
+---
+
 ## Architecture
 
 ### Green Agent (Evaluator)
