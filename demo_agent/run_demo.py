@@ -91,7 +91,7 @@ https://github.com/ServiceNow/AgentLab"""
     env_args = EnvArgs(
         task_name=args.task_name,
         task_seed=None,
-        max_steps=100,
+        max_steps=50,
         headless=False,  # keep the browser open
         # viewport={"width": 1500, "height": 1280},  # can be played with if needed
     )

@@ -17,6 +17,7 @@ install:
 		echo "Skipping apt-get (not Linux)."; \
 	fi
 	python3 -m venv .gym
+	@test -f .env || touch .env
 	@$(PIP) install --upgrade pip
 	@$(PIP) install --break-system-packages -r requirements.txt || true  # Run this to handle errors if they occur
 	@$(PIP) install -r requirements.txt
@@ -28,7 +29,7 @@ install-bm-miniwob:
 		git clone https://github.com/Farama-Foundation/miniwob-plusplus.git; \
 	fi
 	git -C miniwob-plusplus reset --hard 7fd85d71a4b60325c6585396ec4f48377d049838
-	echo "MINIWOB_URL=\"file://$(shell pwd)/miniwob-plusplus/miniwob/html/miniwob/\"" >> .env
+	@printf "\n# Benchmark 1: MiniWoB++\nMINIWOB_URL=file://$(shell pwd)/miniwob-plusplus/miniwob/html/miniwob/" >> .env
 	@echo "MiniWob++ setup complete."
 
 install-bm-webarena-image-tars:
@@ -114,6 +115,7 @@ install-bm-webarena-image-tars:
 
 
 install-bm-webarena:
+	@printf "\n# Benchmark 2: WebArena\nWA_SHOPPING=\"http://$${HOSTNAME}:7770\"\nWA_SHOPPING_ADMIN=\"http://$${HOSTNAME}:7771\"\nWA_GITLAB=\"http://$${HOSTNAME}:9980\"\nWA_REDDIT=\"http://$${HOSTNAME}:9999\"\nWA_WIKIPEDIA=\"http://$${HOSTNAME}:8888\"\nWA_FULL_RESET=\"\"" >> .env
 	@echo "--- Starting Docker containers ---"
 	@docker login --username $(DOCKER_USERNAME) --password $(DOCKER_PASSWORD)
 	docker start gitlab
@@ -131,30 +133,31 @@ install-bm-webarena:
 	sudo iptables -t nat -A PREROUTING -p tcp --dport 9999 -j REDIRECT --to-port 9999
 	sudo iptables -t nat -A PREROUTING -p tcp --dport 8023 -j REDIRECT --to-port 8023
 	@echo "--- Configuring Shopping Website ---"
-	docker exec shopping /var/www/magento2/bin/magento setup:store-config:set --base-url="http://$(HOSTNAME):7770"
-	docker exec shopping mysql -u magentouser -pMyPassword magentodb -e 'UPDATE core_config_data SET value="http://$(HOSTNAME):7770/" WHERE path = "web/secure/base_url";'
+	docker exec shopping /var/www/magento2/bin/magento setup:store-config:set --base-url=$(WA_SHOPPING)
+	docker exec shopping mysql -u magentouser -pMyPassword magentodb -e 'UPDATE core_config_data SET value='$${WA_SHOPPING}/' WHERE path = "web/secure/base_url";'
 	docker exec shopping /var/www/magento2/bin/magento cache:flush
 	@echo "--- Configuring Shopping Admin Website ---"
 	docker exec shopping_admin php /var/www/magento2/bin/magento config:set admin/security/password_is_forced 0
 	docker exec shopping_admin php /var/www/magento2/bin/magento config:set admin/security/password_lifetime 0
-	docker exec shopping_admin /var/www/magento2/bin/magento setup:store-config:set --base-url="http://$(HOSTNAME):7780"
-	docker exec shopping_admin mysql -u magentouser -pMyPassword magentodb -e 'UPDATE core_config_data SET value="http://$(HOSTNAME):7780/" WHERE path = "web/secure/base_url";'
+	docker exec shopping_admin /var/www/magento2/bin/magento setup:store-config:set --base-url=$(WA_SHOPPING_ADMIN)
+	docker exec shopping_admin mysql -u magentouser -pMyPassword magentodb -e 'UPDATE core_config_data SET value='$${WA_SHOPPING_ADMIN}/' WHERE path = "web/secure/base_url";'
 	docker exec shopping_admin /var/www/magento2/bin/magento cache:flush
 	@echo "--- Configuring GitLab Website ---"
-	docker exec gitlab sed -i "s|^external_url.*|external_url 'http://$(HOSTNAME):8023'|" /etc/gitlab/gitlab.rb
+	docker exec gitlab sed -i "s|^external_url.*|external_url $(WA_GITLAB)|" /etc/gitlab/gitlab.rb
 	docker exec gitlab gitlab-ctl reconfigure
 	@echo "--- Testing Services ---"
 	curl -s -o /dev/null -w "Shopping (7770): %{http_code}\n" http://localhost:7770
 	curl -s -o /dev/null -w "Shopping Admin (7780): %{http_code}\n" http://localhost:7780
+	curl -s -o /dev/null -w "GitLab (8023): %{http_code}\n" http://localhost:8023
 	curl -s -o /dev/null -w "Forum (9999): %{http_code}\n" http://localhost:9999
 	curl -s -o /dev/null -w "Wikipedia (8888): %{http_code}\n" http://localhost:8888
 	# curl -s -o /dev/null -w "Map (3000): %{http_code}\n" http://localhost:3000
-	curl -s -o /dev/null -w "GitLab (8023): %{http_code}\n" http://localhost:8023
 	# curl -s -o /dev/null -w "Map tile: %{http_code}\n" http://localhost:3000/tile/0/0/0.png
 	@echo "WebArena setup complete."
 
 install-bm-visualwebarena:
 	@echo "--- Setting up VisualWebArena (Classifieds) ---"
+	@echo -e "\n# Benchmark 3: VisualWebArena\nDATASET=visualwebarena\nVWA_CLASSIFIEDS=\"http://${HOSTNAME}:9980\"\nVWA_CLASSIFIEDS_RESET_TOKEN=\"4b61655535e7ed388f0d40a93600254c\"" >> .env
 	@mkdir -p classifieds_workspace
 	@if [ ! -f classifieds_workspace/classifieds.zip ]; then \
 		echo "Downloading Classifieds docker compose..."; \
@@ -177,13 +180,9 @@ install-bm-visualwebarena:
 	@echo "Testing Classifieds (9980)..."
 	curl -s -o /dev/null -w "Classifieds (9980): %{http_code}\n" http://localhost:9980
 
-install-bm-weblinx:
-	@mkdir -p $(WEBLINX_PROJECT_DIR)
-	@mkdir -p $(WEBLINX_DATA_DIR)
-	$(PY) weblinx/install_weblinx.py
-
 install-agentbeats:
-	@$(PIP) install git+https://github.com/agentbeats/agentbeats.git@main openai
+    @$(PIP) install git+https://github.com/agentbeats/agentbeats.git@main
+	@printf "\n# AgentBeats\nAGENT_HOST=%s\nAGENT_PORT=8000\nLAUNCHER_HOST=%s\nLAUNCHER_PORT=8080\n" "$${HOSTNAME}" "$${HOSTNAME}" >> .env
 
 register-agent:
 	wget -O red_agent_card.toml https://raw.githubusercontent.com/agentbeats/agentbeats/main/scenarios/templates/template_tensortrust_red_agent/red_agent_card.toml
@@ -237,7 +236,7 @@ demo-bm-assistantbench:
 	make demo TASKS="assistantbench.validation.3"
 
 demo-bm-weblinx:
-	make demo TASKS="weblinx.dhbqtap.67"
+	make demo TASKS="weblinx.klatidn.1"
 
 GREEN_AGENT_PATH ?= demo_agent/agent.py
 GREEN_MAX_STEPS ?= 50
@@ -269,25 +268,53 @@ green-webarena:
 		--max_steps $(GREEN_MAX_STEPS)
 
 test-core:
-	@echo "--- 🧪 Running tests ---"
+	@echo "--- Running core tests ---"
 	$(PY) -m pytest -n auto ./tests/core
 
-clean-miniwob:
-	@echo "--- 🧹 Cleaning MiniWoB++ installation ---"
+test-green:
+	@echo "--- Running Green Evaluator tests ---"
+	$(PY) -m pytest -v ./tests/green_evaluator
+
+test-all:
+	@echo "--- Running all tests ---"
+	$(PY) -m pytest -n auto ./tests
+
+clean-bm-miniwob:
+	@echo "--- Cleaning MiniWoB++ installation ---"
 	rm -rf miniwob-plusplus
-	@echo "✅ MiniWoB++ installation cleaned!"
+	@echo "MiniWoB++ installation cleaned!"
+
+clean-bm-webarena:
+	@echo "--- Cleaning WebArena installation ---"
+	@docker rm -f shopping shopping_admin forum gitlab wikipedia 2>/dev/null || true
+	@docker image rm \
+		shopping_final_0712 \
+		shopping_admin_final_0719 \
+		postmill-populated-exposed-withimg \
+		gitlab-populated-final-port8023 \
+		ghcr.io/kiwix/kiwix-serve:3.3.0 \
+		2>/dev/null || true
+	rm -rf wikipedia_data
+	@echo "WebArena cleaned"
+
+clean-bm-visualwebarena:
+	@echo "--- Cleaning VisualWebArena ---"
+	@if [ -d classifieds_workspace/classifieds_docker_compose ]; then \
+		cd classifieds_workspace/classifieds_docker_compose && docker compose down -v; \
+	fi
+	rm -rf classifieds_workspace
+	@echo "VisualWebArena cleaned"
 
 help:
 	@echo "Available targets:"
 	@echo "  install                          - Install project dependencies"
-	@echo "  install-bm-miniwob               - Install MiniWob++"
-	@echo "  install-bm-webarena-image-tars   - Install WebArena image tars if not configuring with AWS"
-	@echo "  install-bm-webarena              - Install WebArena"
+	@echo "  install-bm-miniwob               - Install MiniWoB++"
+	@echo "  install-bm-webarena-image-tars   - Install WebArena Docker image tars"
+	@echo "  install-bm-webarena              - Install and configure WebArena"
 	@echo "  install-bm-visualwebarena        - Install VisualWebArena (Classifieds)"
-	@echo "  install-bm-weblinx               - Install WebLinx"
-	@echo "  install-agentbeats               - Install agentbeats"
-	@echo "  register-agent                   - Register your agent onto the Agentbeats platform"
-	@echo "  register-battle                  - Register your agent for an Agentbeats battle"
+	@echo "  install-agentbeats               - Install AgentBeats"
+	@echo "  register-agent                   - Register your agent with AgentBeats"
+	@echo "  register-battle                  - Register your agent for a battle"
 	@echo "  demo                             - Run demo agent"
 	@echo "  demo-bm-miniwob                  - Run MiniWoB++ demo"
 	@echo "  demo-bm-webarena                 - Run WebArena demo"
@@ -295,10 +322,16 @@ help:
 	@echo "  demo-bm-workarena                - Run WorkArena demo"
 	@echo "  demo-bm-assistantbench           - Run AssistantBench demo"
 	@echo "  demo-bm-weblinx                  - Run WebLinx demo"
-	@echo "  green-workarena                  - Run Green Evaluator on a WorkArena task (set TASK=...)"
-	@echo "  green-webarena                   - Run Green Evaluator on a WebArena task (set TASK=...)"
+	@echo "  green-workarena                  - Run Green Evaluator on a WorkArena task (TASK=...)"
+	@echo "  green-webarena                   - Run Green Evaluator on a WebArena task (TASK=...)"
 	@echo "  test-core                        - Run core tests"
-	@echo "  clean-miniwob                    - Remove MiniWoB++ directory"
+	@echo "  test-green                       - Run Green Evaluator tests"
+	@echo "  test-all                         - Run all tests"
+	@echo "  clean-bm-miniwob                 - Remove MiniWoB++ installation"
+	@echo "  clean-bm-webarena                - Remove WebArena containers and data"
+	@echo "  clean-bm-visualwebarena          - Remove VisualWebArena (Classifieds)"
+	@echo "  clean-bm-weblinx                 - Remove WebLinx caches and artifacts"
 	@echo "  help                             - Show this help message"
 
-.PHONY: install install-benchmark1 install-benchmark2-image-tars install-benchmark2 install-agentbeats register-agent register-battle demo green-workarena green-webarena test-core clean-miniwob help
+.PHONY: install install-bm-miniwob install-bm-webarena-image-tars install-bm-webarena install-bm-visualwebarena install-agentbeats register-agent register-battle demo demo-bm-miniwob demo-bm-webarena demo-bm-visualwebarena
+.PHONY: demo-bm-workarena demo-bm-assistantbench demo-bm-weblinx green-workarena green-webarena test-core test-green test-all clean-bm-miniwob clean-bm-webarena clean-bm-visualwebarena help
