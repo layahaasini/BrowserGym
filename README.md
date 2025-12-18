@@ -258,7 +258,9 @@ WA_HOMEPAGE="http://${HOSTNAME}:4399"
 - Test access: `curl http://localhost:7770`
 
 #### VisualWebArena (Optional)
+**Important**: Source installation required.
 ```bash
+pip install -e browsergym/visualwebarena
 make install-bm-visualwebarena
 ```
 
@@ -271,12 +273,14 @@ VWA_CLASSIFIEDS_RESET_TOKEN="4b61655535e7ed388f0d40a93600254c"
 Uses Docker Compose to run classifieds website on port 9980.
 
 #### WorkArena (Optional)
+**Requirement**: Access is now managed via Hugging Face.
+1. Gain access to [ServiceNow/WorkArena-Instances](https://huggingface.co/datasets/ServiceNow/WorkArena-Instances).
+2. Create a Hugging Face Access Token (Read permission).
 
-Requires ServiceNow instance (not automated). Add to `.env`:
+Add to `.env`:
 ```bash
-SNOW_INSTANCE_URL="https://your-instance.service-now.com"
-SNOW_INSTANCE_UNAME="admin"
-SNOW_INSTANCE_PWD="your-password"
+HUGGING_FACE_HUB_TOKEN="hf_..."
+# Remove SNOW_INSTANCE_* variables if present
 ```
 
 #### AssistantBench (Optional)
@@ -396,14 +400,22 @@ Exp dir: green_evaluation_results/eval_miniwob.click-dialog_1234567890/
 Test white agents without metrics collection. The Makefile automatically sources `.env`:
 
 ```bash
-# Single task (automatically sources .env)
+# Single task (simplest way to test)
 make demo TASKS="miniwob.click-test"
 
-# Multiple tasks
-make demo TASKS="miniwob.click-test webarena.4"
+# WebArena (Verified working!)
+make demo TASKS="webarena.0"
+
+# WorkArena (Requires setup)
+# Note: Fails if browsergym-workarena is not installed or HUGGING_FACE_HUB_TOKEN is missing.
+make demo TASKS="workarena.servicenow.order-standard-laptop"
+
+# VisualWebArena (Requires setup)
+# Note: Fails if scikit-image build fails (Python 3.14 issue) or package not installed.
+make demo TASKS="visualwebarena.classifieds.0"
 
 # All task types
-make demo TASKS="miniwob.click-test webarena.4 visualwebarena.398 workarena.servicenow.order-standard-laptop assistantbench.validation.3"
+make demo TASKS="miniwob.click-test webarena.0"
 ```
 
 This runs the demo white agent (`demo_agent/agent.py`) directly on tasks without green agent evaluation.
