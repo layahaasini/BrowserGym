@@ -83,14 +83,20 @@ class EnvArgs(DataClassJsonMixin):
                 "output_file": exp_dir / "assistantbench-prediction.json"
             }
 
+        # weblinx work around
+        kwargs_for_make = {
+            "headless": self.headless,
+            "wait_for_user_message": self.wait_for_user_message,
+            "action_mapping": action_mapping,
+        }
+        if not self.task_name.startswith("weblinx"):
+            kwargs_for_make["use_raw_page_output"] = use_raw_page_output
+                                        
         return gym.make(
             _get_env_name(self.task_name),
             disable_env_checker=True,
             max_episode_steps=self.max_steps,
-            headless=self.headless,
-            wait_for_user_message=self.wait_for_user_message,
-            action_mapping=action_mapping,  # action mapping is provided by the agent
-            use_raw_page_output=use_raw_page_output,
+            **kwargs_for_make,
             **extra_kwargs,
         )
 
