@@ -1,0 +1,21 @@
+{
+  "agent_evaluated": "WhiteAgent",
+  "total_tasks": 1,
+  "successful_tasks": 1,
+  "failed_tasks": 0,
+  "success_rate": 1.0,
+  "average_steps": 1.0,
+  "average_reward": 1.0,
+  "task_results": [
+    {
+      "task_name": "miniwob.click-dialog",
+      "success": true,
+      "steps_taken": 1,
+      "total_reward": 1.0,
+      "max_steps": 50,
+      "exp_dir": "green_evaluation_results/eval_miniwob.click-dialog_1766036095",
+      "timestamp": 1766036095
+    }
+  ],
+  "evaluation_timestamp": 1766036104
+}

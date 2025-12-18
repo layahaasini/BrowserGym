@@ -240,7 +240,7 @@ class GreenEvaluator:
             self.logger.error(f"Failed to load agent from {agent_path}: {e}")
             raise
     
-    def evaluate_agent_on_task(self, agent: Agent, task_name: str, max_steps: int = 50) -> Dict[str, Any]:
+    def evaluate_agent_on_task(self, agent: Agent, task_name: str, max_steps: int = 50, headless: bool = True) -> Dict[str, Any]:
         """
         Evaluate a single agent on a single benchmark task.
         
@@ -248,6 +248,7 @@ class GreenEvaluator:
             agent: The agent to evaluate
             task_name: Name of the benchmark task (e.g., 'miniwob.click-dialog')
             max_steps: Maximum number of steps for the task
+            headless: Whether to run in headless mode (True) or visible mode (False)
             
         Returns:
             Dictionary containing evaluation results
@@ -259,7 +260,7 @@ class GreenEvaluator:
             task_name=task_name,
             task_seed=None,  # Random seed
             max_steps=max_steps,
-            headless=True,  # Run in headless mode for evaluation
+            headless=headless,  # Run in specified mode
             record_video=False,
             wait_for_user_message=False,  # No human interaction
         )
@@ -386,13 +387,14 @@ class GreenEvaluator:
                 "timestamp": timestamp
             }
     
-    def evaluate_agent_on_benchmark_suite(self, agent: Agent, task_list: List[str]) -> Dict[str, Any]:
+    def evaluate_agent_on_benchmark_suite(self, agent: Agent, task_list: List[str], headless: bool = True) -> Dict[str, Any]:
         """
         Evaluate an agent on multiple benchmark tasks.
         
         Args:
             agent: The agent to evaluate
             task_list: List of task names to evaluate on
+            headless: Whether to run in headless mode (True) or visible mode (False)
             
         Returns:
             Dictionary containing comprehensive evaluation results
@@ -408,7 +410,7 @@ class GreenEvaluator:
             self.logger.info(f"Task {i}/{len(task_list)}: {task_name}")
             
             # Evaluate on this task
-            result = self.evaluate_agent_on_task(agent, task_name)
+            result = self.evaluate_agent_on_task(agent, task_name, headless=headless)
             results.append(result)
             
             # Update statistics

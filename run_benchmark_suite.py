@@ -9,6 +9,7 @@ def main():
     parser.add_argument("--benchmark", type=str, required=True, choices=["miniwob", "workarena", "webarena", "visualwebarena"], help="Benchmark suite to run")
     parser.add_argument("--max_steps", type=int, default=50, help="Max steps per task")
     parser.add_argument("--max_tasks", type=int, default=None, help="Limit number of tasks (useful for WebArena)")
+    parser.add_argument("--headful", action="store_true", help="Run in headful mode (show browser)")
     
     args = parser.parse_args()
 
@@ -35,7 +36,7 @@ def main():
     print(f"Running {args.benchmark} suite with {len(tasks)} tasks...")
     
     # Run suite
-    results = evaluator.evaluate_agent_on_benchmark_suite(agent, tasks)
+    results = evaluator.evaluate_agent_on_benchmark_suite(agent, tasks, headless=not args.headful)
     
     # Print summary
     print(f"\nBenchmark Suite Results ({args.benchmark}):")
