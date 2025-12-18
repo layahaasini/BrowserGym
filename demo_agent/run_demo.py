@@ -1,7 +1,7 @@
 import argparse
 
 # locally defined agent
-from agent import DemoAgentArgs
+from agent import WhiteAgentArgs as DemoAgentArgs
 
 # browsergym experiments utils
 from browsergym.experiments import EnvArgs, ExpArgs, get_exp_result
