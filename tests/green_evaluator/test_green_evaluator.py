@@ -391,15 +391,16 @@ class TestA2AServer:
     @pytest.mark.skipif(not __import__('green_evaluator').A2A_AVAILABLE, reason="A2A dependencies not available")
     def test_agent_card_endpoint(self, evaluator):
         from green_evaluator import A2AServer
+        from fastapi.testclient import TestClient
         
         server = A2AServer(evaluator, card_url="http://localhost:8000")
+        client = TestClient(server.app)
         
-        with server.app.test_client() as client:
-            response = client.get("/card")
-            assert response.status_code == 200
-            data = response.get_json()
-            assert "name" in data
-            assert "capabilities" in data
-            assert "miniwob_benchmark" in data["capabilities"]
-            assert "workarena_benchmark" in data["capabilities"]
-            assert "webarena_benchmark" in data["capabilities"]
+        response = client.get("/card")
+        assert response.status_code == 200
+        data = response.json()
+        assert "name" in data
+        assert "capabilities" in data
+        assert "miniwob_benchmark" in data["capabilities"]
+        assert "workarena_benchmark" in data["capabilities"]
+        assert "webarena_benchmark" in data["capabilities"]
