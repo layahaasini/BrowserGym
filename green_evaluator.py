@@ -50,6 +50,9 @@ except ImportError:
 # BrowserGym imports
 from browsergym.experiments import EnvArgs, ExpArgs, get_exp_result
 from browsergym.experiments.agent import Agent
+from browsergym.workarena import get_task_list as get_workarena_task_list
+from browsergym.webarena import get_task_list as get_webarena_task_list
+from browsergym.visualwebarena import get_task_list as get_visualwebarena_task_list
 
 
 class GreenEvaluator:
@@ -599,8 +602,12 @@ def get_task_list_by_benchmark(benchmark: str) -> List[str]:
         return get_workarena_task_list()
     elif benchmark.lower() == "webarena":
         return get_webarena_task_list()
+    elif benchmark.lower() == "visualwebarena":
+        # VisualWebArena tasks are typically a subset or handled similarly
+        # Assuming standard visualwebarena task IDs
+        return get_visualwebarena_task_list()
     else:
-        raise ValueError(f"Unknown benchmark: {benchmark}. Supported: 'miniwob', 'workarena', 'webarena'")
+        raise ValueError(f"Unknown benchmark: {benchmark}. Supported: 'miniwob', 'workarena', 'webarena', 'visualwebarena'")
 
 
 # ============================================================================
