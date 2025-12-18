@@ -198,9 +198,19 @@ class WebArenaInstance:
 
                 logger.info(f"Navigating to {url} with 2 minute timeout...")
                 page.goto(url, timeout=120000)
-                page.get_by_label("Username").fill(username, timeout=120000)
-                page.get_by_label("Password").fill(password, timeout=120000)
-                page.get_by_role("button", name="Sign in").click(timeout=120000)
+                logger.info(f"Page title: {page.title()}")
+                
+                # Try generic selectors which are more robust
+                try:
+                    page.locator("input[name='login[username]']").fill(username, timeout=30000)
+                    page.locator("input[name='login[password]']").fill(password, timeout=30000)
+                    page.locator(".action.login").click(timeout=30000)
+                except:
+                    # Fallback to labels if generic fails
+                    logger.warning("Generic selectors failed, trying labels...")
+                    page.get_by_label("Username").fill(username, timeout=60000)
+                    page.get_by_label("Password").fill(password, timeout=60000)
+                    page.get_by_role("button", name="Sign in").click(timeout=60000)
 
             case "wikipedia":
                 page.goto(url)
