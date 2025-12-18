@@ -196,10 +196,31 @@ class WebArenaInstance:
                 username = self.credentials[site]["username"]
                 password = self.credentials[site]["password"]
 
-                page.goto(url)
-                page.get_by_label("Username").fill(username)
-                page.get_by_label("Password").fill(password)
-                page.get_by_role("button", name="Sign in").click()
+                logger.info(f"Page title: {page.title()}")
+                
+                # Method 3: IDs (Most reliable for Admin Panel)
+                try:
+                    # Wait for explicitly any text box to ensure loading
+                    page.wait_for_selector("input[type='text'], input[type='email']", timeout=60000)
+                    
+                    # Try standarad Magento Admin IDs
+                    if page.locator("#username").is_visible():
+                        page.fill("#username", username)
+                        page.fill("#login", password)
+                    else:
+                        # Fallback for older versions
+                        page.fill("input[name*='user']", username)
+                        page.fill("input[name*='pass']", password)
+
+                    page.press("body", "Enter") # Press enter instead of finding button
+                    time.sleep(5) # Wait for submission
+                    
+                except Exception as e:
+                    logger.error(f"Login failed: {e}")
+                    # Last ditch effort
+                    page.get_by_label("Username").fill(username, timeout=30000)
+                    page.get_by_label("Password").fill(password, timeout=30000)
+                    page.get_by_role("button", name="Sign in").click(timeout=30000)
 
             case "wikipedia":
                 page.goto(url)
