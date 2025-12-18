@@ -196,10 +196,11 @@ class WebArenaInstance:
                 username = self.credentials[site]["username"]
                 password = self.credentials[site]["password"]
 
-                page.goto(url, timeout=60000)
-                page.get_by_label("Username").fill(username, timeout=30000)
-                page.get_by_label("Password").fill(password, timeout=30000)
-                page.get_by_role("button", name="Sign in").click(timeout=30000)
+                logger.info(f"Navigating to {url} with 2 minute timeout...")
+                page.goto(url, timeout=120000)
+                page.get_by_label("Username").fill(username, timeout=120000)
+                page.get_by_label("Password").fill(password, timeout=120000)
+                page.get_by_role("button", name="Sign in").click(timeout=120000)
 
             case "wikipedia":
                 page.goto(url)
