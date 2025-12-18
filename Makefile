@@ -279,6 +279,10 @@ test-all:
 	@echo "--- Running all tests ---"
 	$(PY) -m pytest -n auto ./tests
 
+test-benchmarks:
+	@echo "--- Running tests for installed benchmarks only ---"
+	$(PY) -m pytest -n auto ./tests/core ./tests/green_evaluator ./tests/miniwob ./tests/assistantbench ./tests/experiments -v
+
 clean-bm-miniwob:
 	@echo "--- Cleaning MiniWoB++ installation ---"
 	rm -rf miniwob-plusplus
@@ -326,7 +330,8 @@ help:
 	@echo "  green-webarena                   - Run Green Evaluator on a WebArena task (TASK=...)"
 	@echo "  test-core                        - Run core tests"
 	@echo "  test-green                       - Run Green Evaluator tests"
-	@echo "  test-all                         - Run all tests"
+	@echo "  test-benchmarks                  - Run tests for installed benchmarks only"
+	@echo "  test-all                         - Run all tests (includes WebArena/VisualWebArena)"
 	@echo "  clean-bm-miniwob                 - Remove MiniWoB++ installation"
 	@echo "  clean-bm-webarena                - Remove WebArena containers and data"
 	@echo "  clean-bm-visualwebarena          - Remove VisualWebArena (Classifieds)"
@@ -334,4 +339,4 @@ help:
 	@echo "  help                             - Show this help message"
 
 .PHONY: install install-bm-miniwob install-bm-webarena-image-tars install-bm-webarena install-bm-visualwebarena install-agentbeats register-agent register-battle demo demo-bm-miniwob demo-bm-webarena demo-bm-visualwebarena
-.PHONY: demo-bm-workarena demo-bm-assistantbench demo-bm-weblinx green-workarena green-webarena test-core test-green test-all clean-bm-miniwob clean-bm-webarena clean-bm-visualwebarena help
+.PHONY: demo-bm-workarena demo-bm-assistantbench demo-bm-weblinx green-workarena green-webarena test-core test-green test-installed test-all clean-bm-miniwob clean-bm-webarena clean-bm-visualwebarena help
