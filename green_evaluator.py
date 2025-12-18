@@ -50,9 +50,7 @@ except ImportError:
 # BrowserGym imports
 from browsergym.experiments import EnvArgs, ExpArgs, get_exp_result
 from browsergym.experiments.agent import Agent
-from browsergym.workarena import get_task_list as get_workarena_task_list
-from browsergym.webarena import get_task_list as get_webarena_task_list
-from browsergym.visualwebarena import get_task_list as get_visualwebarena_task_list
+# Benchmark imports moved to _get_task_list to avoid startup errors if optional deps are missing
 
 
 class GreenEvaluator:
@@ -599,13 +597,35 @@ def get_task_list_by_benchmark(benchmark: str) -> List[str]:
     if benchmark.lower() == "miniwob":
         return get_miniwob_task_list()
     elif benchmark.lower() == "workarena":
-        return get_workarena_task_list()
+        try:
+            from browsergym.workarena import get_task_list
+            return get_task_list()
+        except ImportError:
+            # Fallback for older versions or different structure
+            try:
+                from browsergym.workarena.tasks import get_task_list
+                return get_task_list()
+            except ImportError as e:
+                raise ImportError(f"Could not import get_task_list from browsergym.workarena: {e}")
+
     elif benchmark.lower() == "webarena":
-        return get_webarena_task_list()
+        try:
+             from browsergym.webarena import get_task_list
+             return get_task_list()
+        except ImportError as e:
+             raise ImportError(f"Could not import get_task_list from browsergym.webarena: {e}")
+
     elif benchmark.lower() == "visualwebarena":
-        # VisualWebArena tasks are typically a subset or handled similarly
-        # Assuming standard visualwebarena task IDs
-        return get_visualwebarena_task_list()
+        try:
+            from browsergym.visualwebarena import get_task_list
+            return get_task_list()
+        except ImportError:
+             # Fallback
+            try:
+                from browsergym.visualwebarena.tasks import get_task_list
+                return get_task_list()
+            except ImportError as e:
+                raise ImportError(f"Could not import get_task_list from browsergym.visualwebarena: {e}")
     else:
         raise ValueError(f"Unknown benchmark: {benchmark}. Supported: 'miniwob', 'workarena', 'webarena', 'visualwebarena'")
 
