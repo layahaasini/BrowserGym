@@ -67,14 +67,6 @@ def parse_args():
 
 
 def main():
-    print(
-        """\
---- WARNING ---
-This is a basic agent for demo purposes.
-Visit AgentLab for more capable agents with advanced features.
-https://github.com/ServiceNow/AgentLab"""
-    )
-
     args = parse_args()
 
     # setting up agent config
@@ -92,7 +84,7 @@ https://github.com/ServiceNow/AgentLab"""
         task_name=args.task_name,
         task_seed=None,
         max_steps=50,
-        headless=False,  # keep the browser open
+        headless=False,  # don't keep the browser open
         # viewport={"width": 1500, "height": 1280},  # can be played with if needed
     )
 

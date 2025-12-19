@@ -182,27 +182,28 @@ install-bm-miniwob:
 
 containerize-agents:
 	@echo "--- Putting green and white agent into docker containers ---"
-	@docker build --platform linux/amd64 -t $(GHCR_GREEN_IMAGE):v1.0 -f Dockerfile.green . || { echo "❌ Green agent build failed"; exit 1; }
-	@docker build --platform linux/amd64 -t $(GHCR_WHITE_IMAGE):v1.0 -f Dockerfile.white . || { echo "❌ White agent build failed"; exit 1; }
-	@echo "$(GITHUB_TOKEN)" | docker login ghcr.io -u $(GITHUB_USERNAME) --password-stdin || { echo "❌ Login failed"; exit 1; }
-	@docker push $(GHCR_GREEN_IMAGE):v1.0 || { echo "❌ Push failed"; exit 1; }
-	@docker push $(GHCR_WHITE_IMAGE):v1.0 || { echo "❌ Push failed"; exit 1; }
+	@docker build --platform linux/amd64 -t $${GHCR_GREEN_IMAGE}:v1.0 -f agents/Dockerfile.green . || { echo "❌ Green agent build failed"; exit 1; }
+	@docker build --platform linux/amd64 -t $${GHCR_WHITE_IMAGE}:v1.0 -f agents/Dockerfile.white . || { echo "❌ White agent build failed"; exit 1; }
+	@echo "$${GITHUB_TOKEN}" | docker login ghcr.io -u $${GITHUB_USERNAME} --password-stdin || { echo "❌ Login failed"; exit 1; }
+	@docker push $${GHCR_GREEN_IMAGE}:v1.0 || { echo "❌ Push failed"; exit 1; }
+	@docker push $${GHCR_WHITE_IMAGE}:v1.0 || { echo "❌ Push failed"; exit 1; }
+	@echo "Docker containers setup complete."
 
 demo:
 	@echo "--- Running demo agent with tasks ---"
 	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
-	cd demo_agent && \
+	cd agents && \
 		. ../.env && \
 		if [ -z "$(TASKS)" ]; then \
 			echo "No TASKS specified — running open-ended demo agent"; \
-			xvfb-run -a $(PY) run_demo.py; \
+			xvfb-run -a $(PY) green_agent.py; \
 		else \
 			for TASK in $(TASKS); do \
 				echo "\n=== Working on task: $$TASK ==="; \
 				BENCHMARK=$$(echo $$TASK | cut -d. -f1); \
 				[ "$$BENCHMARK" = "webarena" ] && export WEB_ARENA_DATA_DIR="$$WEB_ARENA_DATA_DIR"; \
 				[ "$$BENCHMARK" = "visualwebarena" ] && export DATASET="$$DATASET"; \
-				xvfb-run -a $(PY) run_demo.py --task $$TASK; \
+				xvfb-run -a $(PY) green_agent.py --task $$TASK; \
 				echo "\n✅ Finished task: $$TASK"; \
 			done; \
 		fi

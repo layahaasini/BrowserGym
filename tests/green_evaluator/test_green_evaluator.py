@@ -66,7 +66,7 @@ class TestAgentLoading:
         assert hasattr(agent, 'action_set')
     
     def test_load_demo_agent(self, evaluator):
-        agent = evaluator.load_agent("demo_agent/agent.py")
+        agent = evaluator.load_agent("agents/agent.py")
         assert agent is not None
     
     def test_load_nonexistent_agent_raises_error(self, evaluator):

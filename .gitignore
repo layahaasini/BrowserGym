@@ -138,6 +138,7 @@ error_logs.txt
 
 # tests
 tests/results
+green_evaluation_results/
 tmp.py
 .vscode/**
 
