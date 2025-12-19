@@ -1,0 +1,67 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info
+dist
+build
+.eggs
+
+# Virtual environments
+.gym
+.venv
+venv
+ENV
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+output
+green_evaluation_results
+demo_agent/results
+tmp_images
+*.tar
+*.zip
+
+# Test artifacts
+.pytest_cache
+.coverage
+htmlcov
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+
+# Documentation
+docs/_build
+*.md
+!README.md
+
+# Classifieds workspace
+classifieds_workspace
+
+# MiniWoB
+miniwob-plusplus
+
+# Notebooks
+*.ipynb
+.ipynb_checkpoints
+

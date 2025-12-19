@@ -1,36 +1,30 @@
 .SILENT:
 
-include .env
-export $(shell sed 's/=.*//' .env)
+-include .env
+export $(shell [ -f .env ] && sed 's/=.*//' .env)
 
 PY := $(shell pwd)/.gym/bin/python
 PIP := $(shell pwd)/.gym/bin/pip
 
 install:
 	@echo "--- Configuring environment and installing dependencies ---"
+	@test -f .env || cp sample.env .env
 	@if [ "$$(uname)" = "Linux" ]; then \
 		sudo apt-get update && \
-		sudo apt-get install -y wget zip unzip xvfb libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libatspi2.0-0 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango-1.0-0 libcairo2 libasound2  python3-pip python3-venv && \
-		sudo apt install -y python3-pip python3-venv docker-compose && \
+		sudo apt-get install -y wget zip unzip xvfb libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libatspi2.0-0 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango-1.0-0 libcairo2 libasound2 python3-pip python3-venv docker-compose && \
 		sudo usermod -aG docker $$USER; \
-	else \
-		echo "Skipping apt-get (not Linux)."; \
 	fi
-	python3 -m venv .gym
-	@test -f .env || touch .env
+	@if [ "$$(uname)" = "Darwin" ]; then \
+		command -v brew >/dev/null || \
+			/bin/bash -c "$$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; \
+		brew install wget zip unzip python docker docker-compose; \
+		echo "Install Docker Desktop manually if not installed."; \
+	fi
+	python3.13 -m venv .gym
 	@$(PIP) install --upgrade pip
-	@$(PIP) install --break-system-packages -r requirements.txt || true  # Run this to handle errors if they occur
 	@$(PIP) install -r requirements.txt
 	@$(PY) -m playwright install chromium
 	@echo "Environment setup complete."
-
-install-bm-miniwob:
-	@if [ ! -d "miniwob-plusplus" ]; then \
-		git clone https://github.com/Farama-Foundation/miniwob-plusplus.git; \
-	fi
-	git -C miniwob-plusplus reset --hard 7fd85d71a4b60325c6585396ec4f48377d049838
-	@printf "\n# Benchmark 1: MiniWoB++\nMINIWOB_URL=\"file://\$${PWD}/miniwob-plusplus/miniwob/html/miniwob/\"" >> .env
-	@echo "MiniWob++ setup complete."
 
 install-bm-webarena-image-tars:
 	mkdir -p tmp_images
@@ -115,7 +109,6 @@ install-bm-webarena-image-tars:
 
 
 install-bm-webarena:
-	@printf "\n# Benchmark 2: WebArena\nWA_SHOPPING=\"http://\$${HOSTNAME}:7770\"\nWA_SHOPPING_ADMIN=\"http://\$${HOSTNAME}:7780/admin\"\nWA_REDDIT=\"http://\$${HOSTNAME}:9999\"\nWA_GITLAB=\"http://\$${HOSTNAME}:8023\"\nWA_MAP=\"http://\$${HOSTNAME}:4444\"\nWA_WIKIPEDIA=\"http://\$${HOSTNAME}:8888/wikipedia_en_all_maxi_2022-05/A/User:The_other_Kiwix_guy/Landing\"\nWA_HOMEPAGE=\"http://\$${HOSTNAME}:4399:\"\nWA_FULL_RESET=\"\"\n# Optional Additional Configs\n# MAP_BACKEND_IP=\"http://\$${HOSTNAME}:3000\"" >> .env
 	@echo "--- Starting Docker containers ---"
 	@docker login --username $(DOCKER_USERNAME) --password $(DOCKER_PASSWORD)
 	docker start gitlab
@@ -157,7 +150,6 @@ install-bm-webarena:
 
 install-bm-visualwebarena:
 	@echo "--- Setting up VisualWebArena (Classifieds) ---"
-	@printf "\n# Benchmark 3: VisualWebArena\nDATASET=visualwebarena\nVWA_CLASSIFIEDS=\"http://\$${HOSTNAME}:9980\"\nVWA_CLASSIFIEDS_RESET_TOKEN=\"4b61655535e7ed388f0d40a93600254c\"\nVWA_SHOPPING=\"http://\$${HOSTNAME}:7770\"\nVWA_REDDIT=\"http://\$${HOSTNAME}:9999\"\nVWA_WIKIPEDIA=\"http://\$${HOSTNAME}:8888\"\nVWA_HOMEPAGE=\"http://\$${HOSTNAME}:80\"\nVWA_FULL_RESET=\"\"\n# WA_FULL_RESET=\"http://\$${HOSTNAME}:7565\"" >> .env
 	@mkdir -p classifieds_workspace
 	@if [ ! -f classifieds_workspace/classifieds.zip ]; then \
 		echo "Downloading Classifieds docker compose..."; \
@@ -180,27 +172,21 @@ install-bm-visualwebarena:
 	@echo "Testing Classifieds (9980)..."
 	curl -s -o /dev/null -w "Classifieds (9980): %{http_code}\n" http://localhost:9980
 
-install-agentbeats:
-    @$(PIP) install git+https://github.com/agentbeats/agentbeats.git@main
-	@printf "\n# AgentBeats\n# If running locally instead of remotely (SSH on a VM), both hosts are localhost\nAGENT_HOST=\$${HOSTNAME}\nAGENT_PORT=8000\nLAUNCHER_HOST=\$${HOSTNAME}\nLAUNCHER_PORT=8080\n" >> .env
+install-bm-miniwob:
+	@if [ ! -d "miniwob-plusplus" ]; then \
+		git clone https://github.com/Farama-Foundation/miniwob-plusplus.git; \
+	fi
+	git -C miniwob-plusplus reset --hard 7fd85d71a4b60325c6585396ec4f48377d049838
+	@printf "\n# Benchmark 4: MiniWoB++\nMINIWOB_URL=\"file://\$${PWD}/miniwob-plusplus/miniwob/html/miniwob/\"" >> .env
+	@echo "MiniWob++ setup complete."
 
-register-agent:
-	wget -O red_agent_card.toml https://raw.githubusercontent.com/agentbeats/agentbeats/main/scenarios/templates/template_tensortrust_red_agent/red_agent_card.toml
-	sed -i 's/agent_url = "http:\/\/127.0.0.1:8000"/agent_url = "http:\/\/$(AGENT_HOST):$(AGENT_PORT)"/' red_agent_card.toml
-	sed -i 's/launcher_url = "http:\/\/127.0.0.1:8080"/launcher_url = "http:\/\/$(LAUNCHER_HOST):$(LAUNCHER_PORT)"/' red_agent_card.toml
-	sed -i 's/name = "TensorTrust"/name = "$(AGENT_NAME)"/' red_agent_card.toml
-	$(PY) -m agentbeats run red_agent_card.toml \
-		--launcher_host $(LAUNCHER_HOST) \
-		--launcher_port $(LAUNCHER_PORT) \
-		--agent_host $(AGENT_HOST) \
-		--agent_port $(AGENT_PORT)
-	@echo "Running AgentBeats currently"
-
-register-battle:
-	curl -X POST https://agentbeats.org/battle/register \
-		-d "agent_url=http://$(AGENT_HOST):$(AGENT_PORT)" \
-		-d "battle_name=$(BATTLE_NAME)"
-	@echo "Battle registered."
+containerize-agents:
+	@echo "--- Putting green and white agent into docker containers ---"
+	@docker build --platform linux/amd64 -t $(GHCR_GREEN_IMAGE):v1.0 -f Dockerfile.green . || { echo "❌ Green agent build failed"; exit 1; }
+	@docker build --platform linux/amd64 -t $(GHCR_WHITE_IMAGE):v1.0 -f Dockerfile.white . || { echo "❌ White agent build failed"; exit 1; }
+	@echo "$(GITHUB_TOKEN)" | docker login ghcr.io -u $(GITHUB_USERNAME) --password-stdin || { echo "❌ Login failed"; exit 1; }
+	@docker push $(GHCR_GREEN_IMAGE):v1.0 || { echo "❌ Push failed"; exit 1; }
+	@docker push $(GHCR_WHITE_IMAGE):v1.0 || { echo "❌ Push failed"; exit 1; }
 
 demo:
 	@echo "--- Running demo agent with tasks ---"
@@ -221,54 +207,54 @@ demo:
 			done; \
 		fi
 
-demo-bm-miniwob:
-	make demo TASKS="miniwob.click-test"
+# demo-bm-webarena:
+# 	make demo TASKS="webarena.4"
 
-demo-bm-webarena:
-	make demo TASKS="webarena.4"
+# demo-bm-visualwebarena:
+# 	make demo TASKS="visualwebarena.398"
 
-demo-bm-visualwebarena:
-	make demo TASKS="visualwebarena.398"
+# demo-bm-workarena:
+# 	make demo TASKS="workarena.servicenow.order-standard-laptop"
 
-demo-bm-workarena:
-	make demo TASKS="workarena.servicenow.order-standard-laptop"
+# demo-bm-miniwob:
+# 	make demo TASKS="miniwob.click-test"
 
-demo-bm-assistantbench:
-	make demo TASKS="assistantbench.validation.3"
+# demo-bm-assistantbench:
+# 	make demo TASKS="assistantbench.validation.3"
 
-demo-bm-weblinx:
-	make demo TASKS="weblinx.klatidn.1"
+# demo-bm-weblinx:
+# 	make demo TASKS="weblinx.klatidn.1"
 
-GREEN_AGENT_PATH ?= demo_agent/agent.py
-GREEN_MAX_STEPS ?= 50
+# GREEN_AGENT_PATH ?= demo_agent/agent.py
+# GREEN_MAX_STEPS ?= 50
 
-green-workarena:
-	@if [ -z "$(TASK)" ]; then \
-		echo "Please provide TASK=workarena.servicenow.<task-name>"; \
-		exit 1; \
-	fi
-	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
-	@echo "--- Running Green Evaluator on WorkArena task: $(TASK) ---"
-	. .env && \
-	$(PY) green_evaluator.py \
-		--agent_path $(GREEN_AGENT_PATH) \
-		--task $(TASK) \
-		--max_steps $(GREEN_MAX_STEPS)
+# green-workarena:
+# 	@if [ -z "$(TASK)" ]; then \
+# 		echo "Please provide TASK=workarena.servicenow.<task-name>"; \
+# 		exit 1; \
+# 	fi
+# 	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
+# 	@echo "--- Running Green Evaluator on WorkArena task: $(TASK) ---"
+# 	. .env && \
+# 	$(PY) green_evaluator.py \
+# 		--agent_path $(GREEN_AGENT_PATH) \
+# 		--task $(TASK) \
+# 		--max_steps $(GREEN_MAX_STEPS)
 
-green-webarena:
-	@if [ -z "$(TASK)" ]; then \
-		echo "Please provide TASK=webarena.<task-id> (e.g., TASK=webarena.4)"; \
-		exit 1; \
-	fi
-	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
-	@echo "--- Running Green Evaluator on WebArena task: $(TASK) ---"
-	@echo "Note: WebArena requires Docker containers running on your GCP VM"
-	@echo "Make sure WA_* environment variables are set in .env pointing to your VM"
-	. .env && \
-	$(PY) green_evaluator.py \
-		--agent_path $(GREEN_AGENT_PATH) \
-		--task $(TASK) \
-		--max_steps $(GREEN_MAX_STEPS)
+# green-webarena:
+# 	@if [ -z "$(TASK)" ]; then \
+# 		echo "Please provide TASK=webarena.<task-id> (e.g., TASK=webarena.4)"; \
+# 		exit 1; \
+# 	fi
+# 	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
+# 	@echo "--- Running Green Evaluator on WebArena task: $(TASK) ---"
+# 	@echo "Note: WebArena requires Docker containers running on your GCP VM"
+# 	@echo "Make sure WA_* environment variables are set in .env pointing to your VM"
+# 	. .env && \
+# 	$(PY) green_evaluator.py \
+# 		--agent_path $(GREEN_AGENT_PATH) \
+# 		--task $(TASK) \
+# 		--max_steps $(GREEN_MAX_STEPS)
 
 test-core:
 	@echo "--- Running core tests ---"
@@ -323,18 +309,15 @@ help:
 	@echo "  install-bm-webarena-image-tars   - Install WebArena Docker image tars"
 	@echo "  install-bm-webarena              - Install and configure WebArena"
 	@echo "  install-bm-visualwebarena        - Install VisualWebArena (Classifieds)"
-	@echo "  install-agentbeats               - Install AgentBeats"
-	@echo "  register-agent                   - Register your agent with AgentBeats"
-	@echo "  register-battle                  - Register your agent for a battle"
 	@echo "  demo                             - Run demo agent"
-	@echo "  demo-bm-miniwob                  - Run MiniWoB++ demo"
-	@echo "  demo-bm-webarena                 - Run WebArena demo"
-	@echo "  demo-bm-visualwebarena           - Run VisualWebArena demo"
-	@echo "  demo-bm-workarena                - Run WorkArena demo"
-	@echo "  demo-bm-assistantbench           - Run AssistantBench demo"
-	@echo "  demo-bm-weblinx                  - Run WebLinx demo"
-	@echo "  green-workarena                  - Run Green Evaluator on a WorkArena task (TASK=...)"
-	@echo "  green-webarena                   - Run Green Evaluator on a WebArena task (TASK=...)"
+# 	@echo "  demo-bm-miniwob                  - Run MiniWoB++ demo"
+# 	@echo "  demo-bm-webarena                 - Run WebArena demo"
+# 	@echo "  demo-bm-visualwebarena           - Run VisualWebArena demo"
+# 	@echo "  demo-bm-workarena                - Run WorkArena demo"
+# 	@echo "  demo-bm-assistantbench           - Run AssistantBench demo"
+# 	@echo "  demo-bm-weblinx                  - Run WebLinx demo"
+# 	@echo "  green-workarena                  - Run Green Evaluator on a WorkArena task (TASK=...)"
+# 	@echo "  green-webarena                   - Run Green Evaluator on a WebArena task (TASK=...)"
 	@echo "  test-core                        - Run core tests"
 	@echo "  test-green                       - Run Green Evaluator tests"
 	@echo "  test-benchmarks                  - Run tests for installed benchmarks only"
@@ -345,5 +328,5 @@ help:
 	@echo "  clean-bm-weblinx                 - Remove WebLinx caches and artifacts"
 	@echo "  help                             - Show this help message"
 
-.PHONY: install install-bm-miniwob install-bm-webarena-image-tars install-bm-webarena install-bm-visualwebarena install-agentbeats register-agent register-battle demo demo-bm-miniwob demo-bm-webarena demo-bm-visualwebarena
+.PHONY: install install-bm-miniwob install-bm-webarena-image-tars install-bm-webarena install-bm-visualwebarena demo demo-bm-miniwob demo-bm-webarena demo-bm-visualwebarena
 .PHONY: demo-bm-workarena demo-bm-assistantbench demo-bm-weblinx green-workarena green-webarena test-core test-green test-installed test-all clean-bm-miniwob clean-bm-webarena clean-bm-visualwebarena help

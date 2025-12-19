@@ -160,4 +160,7 @@ miniwob-plusplus/
 images/
 tmp_images/
 
+# visual webarena
+classifieds_workspace/
+
 uv.lock
