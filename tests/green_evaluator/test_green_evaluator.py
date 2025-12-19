@@ -5,7 +5,7 @@ import tempfile
 import time
 from unittest.mock import Mock, patch
 
-from green_evaluator import GreenEvaluator, get_miniwob_task_list, get_workarena_task_list, get_webarena_task_list
+from agents.green_evaluator import GreenEvaluator, get_miniwob_task_list, get_workarena_task_list, get_webarena_task_list
 from browsergym.experiments.agent import Agent
 from browsergym.core.action.highlevel import HighLevelActionSet
 
@@ -390,7 +390,7 @@ class TestTaskLists:
 class TestA2AServer:
     @pytest.mark.skipif(not __import__('green_evaluator').A2A_AVAILABLE, reason="A2A dependencies not available")
     def test_agent_card_endpoint(self, evaluator):
-        from green_evaluator import A2AServer
+        from agents.green_evaluator import A2AServer
         from fastapi.testclient import TestClient
         
         server = A2AServer(evaluator, card_url="http://localhost:8000")

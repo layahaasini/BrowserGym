@@ -1,7 +1,7 @@
 import argparse
 import sys
 import os
-from green_evaluator import GreenEvaluator, get_task_list_by_benchmark, A2A_AVAILABLE
+from agents.green_evaluator import GreenEvaluator, get_task_list_by_benchmark, A2A_AVAILABLE
 
 def main():
     parser = argparse.ArgumentParser(description="Run Benchmark Suite")

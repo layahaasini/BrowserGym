@@ -2,11 +2,16 @@ import base64
 import dataclasses
 import io
 import logging
-import time
+import uuid
+from typing import Dict, List, Any, Optional
 
 import numpy as np
 import openai
 from PIL import Image
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+import uvicorn
+from pydantic import BaseModel
 
 from browsergym.core.action.highlevel import HighLevelActionSet
 from browsergym.experiments import AbstractAgentArgs, Agent
@@ -16,8 +21,6 @@ logger = logging.getLogger(__name__)
 
 
 def image_to_jpg_base64_url(image: np.ndarray | Image.Image):
-    """Convert a numpy array to a base64 encoded image url."""
-
     if isinstance(image, np.ndarray):
         image = Image.fromarray(image)
     if image.mode in ("RGBA", "LA"):
@@ -31,12 +34,7 @@ def image_to_jpg_base64_url(image: np.ndarray | Image.Image):
 
 
 class WhiteAgent(Agent):
-    """
-    White Agent for BrowserGym benchmarks.
-    
-    This agent uses OpenAI's GPT models to interact with web environments.
-    It implements a chain-of-thought reasoning process to decide on actions.
-    """
+    """White agent using OpenAI API for BrowserGym tasks."""
 
     def obs_preprocessor(self, obs: dict) -> dict:
         return {
@@ -54,12 +52,12 @@ class WhiteAgent(Agent):
 
     def __init__(
         self,
-        model_name: str = "gpt-4o-mini",
-        chat_mode: bool = False,
-        demo_mode: str = "off",
-        use_html: bool = False,
-        use_axtree: bool = True,
-        use_screenshot: bool = False,
+        model_name: str,
+        chat_mode: bool,
+        demo_mode: str,
+        use_html: bool,
+        use_axtree: bool,
+        use_screenshot: bool,
     ) -> None:
         super().__init__()
         self.model_name = model_name
@@ -86,218 +84,94 @@ class WhiteAgent(Agent):
         system_msgs = []
         user_msgs = []
 
-        # System Instruction with CoT emphasis
-        system_msgs.append(
-            {
-                "type": "text",
-                "text": """\
-# Instructions
-
-You are a capable UI Assistant. Your goal is to help the user perform tasks using a web browser.
-You have access to a web browser that you can interact with via specific commands.
-
-## Reasoning Strategy
-1. Analyze the user's goal and the current page state (URL, content, accessibility tree).
-2. Review past actions and any errors to avoid repeating mistakes.
-3. Formulate a step-by-step plan to achieve the goal.
-4. Select the best single next action from the available action space.
-
-Your answer will be interpreted and executed by a program, make sure to follow the formatting instructions.
-""",
-            }
-        )
-
         if self.chat_mode:
-            user_msgs.append(
-                {
-                    "type": "text",
-                    "text": f"""\
-# Chat Messages
-""",
-                }
-            )
+            system_msgs.append({
+                "type": "text",
+                "text": "# Instructions\n\nYou are a UI Assistant, your goal is to help the user perform tasks using a web browser. You can communicate with the user via a chat, to which the user gives you instructions and to which you can send back messages. You have access to a web browser that both you and the user can see, and with which only you can interact via specific commands.\n\nReview the instructions from the user, the current state of the page and all other information to find the best possible next action to accomplish your goal. Your answer will be interpreted and executed by a program, make sure to follow the formatting instructions."
+            })
+            user_msgs.append({"type": "text", "text": "# Chat Messages"})
             for msg in obs["chat_messages"]:
                 if msg["role"] in ("user", "assistant", "infeasible"):
-                    user_msgs.append(
-                        {
-                            "type": "text",
-                            "text": f"""\
-- [{msg['role']}] {msg['message']}
-""",
-                        }
-                    )
+                    user_msgs.append({"type": "text", "text": f"- [{msg['role']}] {msg['message']}"})
                 elif msg["role"] == "user_image":
                     user_msgs.append({"type": "image_url", "image_url": msg["message"]})
                 else:
                     raise ValueError(f"Unexpected chat message role {repr(msg['role'])}")
-
         else:
             assert obs["goal_object"], "The goal is missing."
-            user_msgs.append(
-                {
-                    "type": "text",
-                    "text": f"""\
-# Goal
-""",
-                }
-            )
+            system_msgs.append({
+                "type": "text",
+                "text": "# Instructions\n\nReview the current state of the page and all other information to find the best possible next action to accomplish your goal. Your answer will be interpreted and executed by a program, make sure to follow the formatting instructions."
+            })
+            user_msgs.append({"type": "text", "text": "# Goal"})
             user_msgs.extend(obs["goal_object"])
 
-        # append url of all open tabs
-        user_msgs.append(
-            {
-                "type": "text",
-                "text": f"""\
-# Currently open tabs
-""",
-            }
-        )
+        user_msgs.append({"type": "text", "text": "# Currently open tabs"})
         for page_index, (page_url, page_title) in enumerate(
             zip(obs["open_pages_urls"], obs["open_pages_titles"])
         ):
-            user_msgs.append(
-                {
-                    "type": "text",
-                    "text": f"""\
-Tab {page_index}{" (active tab)" if page_index == obs["active_page_index"] else ""}
-  Title: {page_title}
-  URL: {page_url}
-""",
-                }
-            )
+            user_msgs.append({
+                "type": "text",
+                "text": f"Tab {page_index}{' (active tab)' if page_index == obs['active_page_index'] else ''}\n Title: {page_title}\n URL: {page_url}"
+            })
 
-        # append page AXTree (if asked)
         if self.use_axtree:
-            user_msgs.append(
-                {
-                    "type": "text",
-                    "text": f"""\
-# Current page Accessibility Tree
-
-{obs["axtree_txt"]}
-
-""",
-                }
-            )
-        # append page HTML (if asked)
+            user_msgs.append({"type": "text", "text": f"# Current page Accessibility Tree\n\n{obs['axtree_txt']}\n"})
+        
         if self.use_html:
-            user_msgs.append(
-                {
-                    "type": "text",
-                    "text": f"""\
-# Current page DOM
+            user_msgs.append({"type": "text", "text": f"# Current page DOM\n\n{obs['pruned_html']}\n"})
 
-{obs["pruned_html"]}
-
-""",
-                }
-            )
-
-        # append page screenshot (if asked)
         if self.use_screenshot:
-            user_msgs.append(
-                {
-                    "type": "text",
-                    "text": """\
-# Current page Screenshot
-""",
+            user_msgs.append({"type": "text", "text": "# Current page Screenshot"})
+            user_msgs.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": image_to_jpg_base64_url(obs["screenshot"]),
+                    "detail": "auto",
                 }
-            )
-            user_msgs.append(
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": image_to_jpg_base64_url(obs["screenshot"]),
-                        "detail": "auto",
-                    },
-                }
-            )
+            })
 
-        # append action space description
-        user_msgs.append(
-            {
-                "type": "text",
-                "text": f"""\
-# Action Space
+        user_msgs.append({
+            "type": "text",
+            "text": f"# Action Space\n\n{self.action_set.describe(with_long_description=False, with_examples=True)}\n\nHere are examples of actions with chain-of-thought reasoning:\n\nI now need to click on the Submit button to send the form. I will use the click action on the button, which has bid 12.\n```click(\"12\")```\n\nI found the information requested by the user, I will send it to the chat.\n```send_msg_to_user(\"The price for a 15\\\" laptop is 1499 USD.\")```\n"
+        })
 
-{self.action_set.describe(with_long_description=False, with_examples=True)}
-
-Here are examples of actions with chain-of-thought reasoning:
-
-I now need to click on the Submit button to send the form. I will use the click action on the button, which has bid 12.
-```click("12")```
-
-I found the information requested by the user, I will send it to the chat.
-```send_msg_to_user("The price for a 15\\" laptop is 1499 USD.")```
-
-""",
-            }
-        )
-
-        # append past actions
         if self.action_history:
-            user_msgs.append(
-                {
-                    "type": "text",
-                    "text": f"""\
-# History of past actions
-""",
-                }
-            )
-            user_msgs.extend(
-                [
-                    {
-                        "type": "text",
-                        "text": f"""\
-
-{action}
-""",
-                    }
-                    for action in self.action_history
-                ]
-            )
-
+            user_msgs.append({"type": "text", "text": "# History of past actions"})
+            user_msgs.extend([{"type": "text", "text": f"\n{action}"} for action in self.action_history])
             if obs["last_action_error"]:
-                user_msgs.append(
-                    {
-                        "type": "text",
-                        "text": f"""\
-# Error message from last action
+                user_msgs.append({"type": "text", "text": f"# Error message from last action\n\n{obs['last_action_error']}\n"})
 
-{obs["last_action_error"]}
-
-""",
-                    }
-                )
-
-        # ask for the next action
-        user_msgs.append(
-            {
-                "type": "text",
-                "text": f"""\
-# Next action
-
-You will now think step by step and produce your next best action. Reflect on your past actions, any resulting error message, and the current state of the page before deciding on your next action.
-""",
-            }
-        )
+        user_msgs.append({
+            "type": "text",
+            "text": "# Next action\n\nYou will now think step by step and produce your next best action. Reflect on your past actions, any resulting error message, and the current state of the page before deciding on your next action."
+        })
 
         prompt_text_strings = []
         for message in system_msgs + user_msgs:
-            if message["type"] == "text":
-                prompt_text_strings.append(message["text"])
-
+            match message["type"]:
+                case "text":
+                    prompt_text_strings.append(message["text"])
+                case "image_url":
+                    image_url = message["image_url"]
+                    if isinstance(message["image_url"], dict):
+                        image_url = image_url["url"]
+                    if image_url.startswith("data:image"):
+                        prompt_text_strings.append("image_url: " + image_url[:30] + "... (truncated)")
+                    else:
+                        prompt_text_strings.append("image_url: " + image_url)
+                case _:
+                    raise ValueError(f"Unknown message type {repr(message['type'])} in the task goal.")
+        
         full_prompt_txt = "\n".join(prompt_text_strings)
         logger.info(full_prompt_txt)
 
-        # query OpenAI model
         response = self.openai_client.chat.completions.create(
             model=self.model_name,
             messages=[
                 {"role": "system", "content": system_msgs},
                 {"role": "user", "content": user_msgs},
             ],
-            temperature=0.0, # Deterministic for evaluation
         )
         action = response.choices[0].message.content
 
@@ -308,10 +182,6 @@ You will now think step by step and produce your next best action. Reflect on yo
 
 @dataclasses.dataclass
 class WhiteAgentArgs(AbstractAgentArgs):
-    """
-    Arguments for the White Agent.
-    """
-
     model_name: str = "gpt-4o-mini"
     chat_mode: bool = False
     demo_mode: str = "off"
@@ -329,112 +199,130 @@ class WhiteAgentArgs(AbstractAgentArgs):
             use_screenshot=self.use_screenshot,
         )
 
-# ============================================================================
-# A2A Server Implementation
-# ============================================================================
 
-try:
-    from fastapi import FastAPI, Request
-    from fastapi.responses import JSONResponse
-    from pydantic import BaseModel
-    import uvicorn
-    A2A_AVAILABLE = True
-except ImportError:
-    A2A_AVAILABLE = False
-    logger.warning("FastAPI/Uvicorn not found. A2A server capabilities disabled.")
+class A2AMessage(BaseModel):
+    role: str
+    parts: List[Dict[str, Any]]
 
-if A2A_AVAILABLE:
-    class WhiteAgentServer:
-        """A2A Server wrapper for White Agent"""
-        
-        def __init__(self, agent: WhiteAgent, port: int = 8000):
-            self.agent = agent
-            self.port = port
-            self.app = FastAPI(title="BrowserGym White Agent", version="1.0.0")
+
+class A2AMessageRequest(BaseModel):
+    message: A2AMessage
+    context: Optional[Dict[str, Any]] = None
+
+
+def create_a2a_app(agent: WhiteAgent, card_url: str) -> FastAPI:
+    """Create FastAPI app with A2A protocol endpoints for the white agent."""
+    app = FastAPI(title="BrowserGym White Agent", version="1.0.0")
+    tasks = {}
+
+    @app.get("/.well-known/agent-card.json")
+    async def get_agent_card():
+        return {
+            "name": "BrowserGym White Agent",
+            "description": "Web automation agent with GPT-4o-mini for browser tasks",
+            "url": card_url,
+            "skills": [{
+                "name": "web_automation",
+                "description": "Automate web browser interactions for tasks"
+            }],
+            "capabilities": [
+                "miniwob_benchmark",
+                "workarena_benchmark",
+                "webarena_benchmark"
+            ]
+        }
+
+    @app.get("/")
+    async def root():
+        return {"name": "BrowserGym White Agent", "version": "1.0.0", "status": "ready"}
+
+    @app.get("/health")
+    async def health():
+        return {"status": "healthy"}
+
+    @app.post("/message/send")
+    async def send_message(request: A2AMessageRequest):
+        try:
+            task_id = str(uuid.uuid4())
+            text_content = "".join(part.get("text", "") for part in request.message.parts if part.get("kind") == "text")
             
-            # Setup routes
-            self._setup_routes()
-        
-        def _setup_routes(self):
-            """Setup A2A protocol routes"""
+            tasks[task_id] = {
+                "id": task_id,
+                "status": "received",
+                "message": text_content,
+                "result": None
+            }
             
-            @self.app.get("/")
-            async def root():
-                return {
-                    "name": "BrowserGym White Agent",
-                    "description": "Generalist Web Agent using GPT-4o-mini",
-                    "version": "1.0.0",
-                    "a2a_protocol": True
-                }
+            logger.info(f"Received A2A message for task {task_id}: {text_content}")
             
-            @self.app.get("/card")
-            async def get_card():
-                """Return agent card information"""
-                return {
-                    "name": "BrowserGym White Agent",
-                    "description": "Generalist Web Agent using GPT-4o-mini and CoT",
-                    "url": f"http://localhost:{self.port}",
-                    "capabilities": [
-                        "miniwob_benchmark",
-                        "workarena_benchmark",
-                        "webarena_benchmark",
-                        "agent_solver"
-                    ]
-                }
-            
-            @self.app.get("/status")
-            async def status():
-                """Health check endpoint"""
-                return {"status": "healthy"}
+            return {"task_id": task_id, "status": "received", "message": "Task received and queued"}
+        except Exception as e:
+            logger.error(f"Error handling A2A message: {e}")
+            return JSONResponse(status_code=500, content={"error": str(e)})
 
-            @self.app.get("/health")
-            async def health():
-                """Health check endpoint"""
-                return {"status": "healthy"}
-            
-            @self.app.post("/a2a/message")
-            async def handle_a2a_message(request: Request):
-                """Handle incoming A2A messages - Basic logging for solver"""
-                try:
-                    body = await request.json()
-                    logger.info(f"Received A2A message: {body.get('type')}")
-                    return {"status": "received"}
-                except Exception as e:
-                    logger.error(f"Error handling A2A message: {e}")
-                    return JSONResponse(status_code=500, content={"error": str(e)})
+    @app.post("/message/stream")
+    async def stream_message(request: A2AMessageRequest):
+        return await send_message(request)
 
-        def run(self):
-            uvicorn.run(self.app, host="0.0.0.0", port=self.port)
+    @app.post("/task/get")
+    async def get_task(request: Request):
+        try:
+            body = await request.json()
+            task_id = body.get("task_id")
+            
+            if task_id not in tasks:
+                return JSONResponse(status_code=404, content={"error": "Task not found"})
+            
+            task = tasks[task_id]
+            return {"task_id": task_id, "status": task["status"], "result": task.get("result")}
+        except Exception as e:
+            logger.error(f"Error getting task: {e}")
+            return JSONResponse(status_code=500, content={"error": str(e)})
+
+    @app.post("/task/cancel")
+    async def cancel_task(request: Request):
+        try:
+            body = await request.json()
+            task_id = body.get("task_id")
+            
+            if task_id in tasks:
+                tasks[task_id]["status"] = "cancelled"
+                return {"task_id": task_id, "status": "cancelled"}
+            
+            return JSONResponse(status_code=404, content={"error": "Task not found"})
+        except Exception as e:
+            logger.error(f"Error cancelling task: {e}")
+            return JSONResponse(status_code=500, content={"error": str(e)})
+
+    return app
 
 
-def main():
+if __name__ == "__main__":
     import argparse
     from dotenv import load_dotenv
     
-    # Load environment variables
     load_dotenv()
     
-    parser = argparse.ArgumentParser(description="Run White Agent")
+    parser = argparse.ArgumentParser(description="BrowserGym White Agent")
     parser.add_argument("--a2a-server", action="store_true", help="Run as A2A server")
-    parser.add_argument("--port", type=int, default=8000, help="Port for A2A server")
-    parser.add_argument("--model_name", type=str, default="gpt-4o-mini")
+    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind to")
+    parser.add_argument("--port", type=int, default=8001, help="Port to listen on")
+    parser.add_argument("--card-url", type=str, default=None, help="Public URL for agent card")
+    parser.add_argument("--model_name", type=str, default="gpt-4o-mini", help="OpenAI model")
     
     args = parser.parse_args()
     
-    # Initialize the agent
-    agent_args = WhiteAgentArgs(model_name=args.model_name)
-    agent = agent_args.make_agent()
-    
     if args.a2a_server:
-        if not A2A_AVAILABLE:
-            print("Error: FastAPI/Uvicorn not installed. Cannot run A2A server.")
-            return
-            
-        print(f"Starting White Agent A2A Server on port {args.port}...")
-        server = WhiteAgentServer(agent, port=args.port)
-        server.run()
+        agent_args = WhiteAgentArgs(model_name=args.model_name)
+        agent = agent_args.make_agent()
+        
+        card_url = args.card_url or f"http://{args.host}:{args.port}"
+        app = create_a2a_app(agent, card_url)
+        
+        print(f"Starting BrowserGym White Agent")
+        print(f"Server: {card_url}")
+        print(f"Agent Card: {card_url}/.well-known/agent-card.json")
+        
+        uvicorn.run(app, host=args.host, port=args.port)
     else:
-        print("White Agent initialized. ready to be loaded by Green Evaluator.")
-
-if __name__ == "__main__":
-    main()
+        print("Use --a2a-server flag to run in A2A server mode")
