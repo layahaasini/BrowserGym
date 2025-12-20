@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from white_agent import WhiteAgentArgs
 from browsergym.experiments import EnvArgs, ExpArgs, get_exp_result
+from dotenv import load_dotenv
 
 
 def parse_args():
@@ -360,13 +361,12 @@ def main():
         exp_args = ExpArgs(env_args=env_args, agent_args=agent_args)
         exp_args.prepare("./results/green_eval")
         exp_args.run()
-        
+
         exp_result = get_exp_result(exp_args.exp_dir)
         print(f"\nEvaluation complete: {exp_result.get_exp_record()}")
 
 
 if __name__ == "__main__":
-    from dotenv import load_dotenv
     load_dotenv()
     
     args = parse_args()
@@ -382,4 +382,4 @@ if __name__ == "__main__":
         
         uvicorn.run(app, host="0.0.0.0", port=args.port)
     else:
-    main()
+        main()
