@@ -45,31 +45,34 @@ def create_a2a_app(card_url: str) -> FastAPI:
 
     @app.get("/.well-known/agent-card.json")
     async def get_agent_card():
-        return {
-            "protocolVersion": "0.3.0",
-            "preferredTransport": "JSONRPC",
-            "capabilities": {
-                "streaming": False
+        return JSONResponse(
+            content={
+                "protocolVersion": "0.3.0",
+                "preferredTransport": "JSONRPC",
+                "capabilities": {
+                    "streaming": False
+                },
+                "defaultInputModes": ["text"],
+                "defaultOutputModes": ["text"],
+                "name": "BrowserGym Green Evaluator",
+                "description": "Assessment hosting agent for BrowserGym web automation benchmarks",
+                "url": card_url,
+                "version": "1.0.0",
+                "skills": [{
+                    "id": "host_assess_browsergym",
+                    "name": "BrowserGym Assessment Hosting",
+                    "description": "Evaluate white agents on web automation benchmarks including MiniWoB, WebArena, WorkArena, and VisualWebArena",
+                    "examples": [
+                        "Assess agent on miniwob.click-test with max 50 steps",
+                        "Evaluate agent on webarena task with shopping environment",
+                        "Run WorkArena ServiceNow task evaluation",
+                        "Test agent on VisualWebArena visual reasoning tasks"
+                    ],
+                    "tags": ["green agent", "assessment hosting", "browsergym", "web automation"]
+                }]
             },
-            "defaultInputModes": ["text"],
-            "defaultOutputModes": ["text"],
-            "name": "BrowserGym Green Evaluator",
-            "description": "Assessment hosting agent for BrowserGym web automation benchmarks",
-            "url": card_url,
-            "version": "1.0.0",
-            "skills": [{
-                "id": "host_assess_browsergym",
-                "name": "BrowserGym Assessment Hosting",
-                "description": "Evaluate white agents on web automation benchmarks including MiniWoB, WebArena, WorkArena, and VisualWebArena",
-                "examples": [
-                    "Assess agent on miniwob.click-test with max 50 steps",
-                    "Evaluate agent on webarena task with shopping environment",
-                    "Run WorkArena ServiceNow task evaluation",
-                    "Test agent on VisualWebArena visual reasoning tasks"
-                ],
-                "tags": ["green agent", "assessment hosting", "browsergym", "web automation"]
-            }]
-        }
+            media_type="application/json"
+        )
 
     @app.get("/")
     async def root():
@@ -356,9 +359,9 @@ def main():
         env_args = EnvArgs(task_name="miniwob.click-test", max_steps=args.max_steps)
         exp_args = ExpArgs(env_args=env_args, agent_args=agent_args)
         exp_args.prepare("./results/green_eval")
-        exp_args.run()
-        
-        exp_result = get_exp_result(exp_args.exp_dir)
+    exp_args.run()
+
+    exp_result = get_exp_result(exp_args.exp_dir)
         print(f"\nEvaluation complete: {exp_result.get_exp_record()}")
 
 
@@ -379,4 +382,4 @@ if __name__ == "__main__":
         
         uvicorn.run(app, host="0.0.0.0", port=args.port)
     else:
-        main()
+    main()
