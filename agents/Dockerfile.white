@@ -24,7 +24,7 @@ RUN python -m playwright install-deps chromium || true
 
 # Copy application code
 COPY --chown=agentbeats:agentbeats browsergym ./browsergym
-COPY --chown=agentbeats:agentbeats agents/white_agent.py .
+COPY --chown=agentbeats:agentbeats agents/white_agent.py white_agent.py
 COPY --chown=agentbeats:agentbeats pyproject.toml .
 
 # Set environment

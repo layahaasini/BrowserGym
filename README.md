@@ -26,7 +26,7 @@ A system for evaluating web agents. The **green agent** evaluates **white agents
 ### Green Agent (Evaluator)
 **Purpose**: Evaluate white agents on benchmark tasks
 
-**Location**: `green_evaluator.py`
+**Location**: `agents/green_agent.py`
 
 **Functions**:
 - Loads white agents from Python files
@@ -50,9 +50,7 @@ A system for evaluating web agents. The **green agent** evaluates **white agents
 ### White Agent (Agent Under Test)
 **Purpose**: Perform web automation tasks
 
-**Locations**: 
-- `demo_agent/agent.py` - Demo implementation
-- `white_agent/white_agent.py` - Reference implementation
+**Location**: `agents/white_agent.py`
 
 **Required Interface**:
 ```python
@@ -374,12 +372,12 @@ The Makefile automatically sources `.env` before running, so environment variabl
 
 **Single task evaluation**:
 ```bash
-python green_evaluator.py --agent_path demo_agent/agent.py --task miniwob.click-dialog --max_steps 20
+cd agents && python green_agent.py --task miniwob.click-dialog --max_steps 20
 ```
 
 **Benchmark suite evaluation**:
 ```bash
-python green_evaluator.py --agent_path white_agent/white_agent.py
+cd agents && python green_agent.py --task miniwob.click-test
 ```
 
 **Using make commands** (automatically sources .env):
@@ -480,7 +478,7 @@ class MyWhiteAgent(Agent):
 
 2. Evaluate with green agent:
 ```bash
-python green_evaluator.py --agent_path my_agent.py --task miniwob.click-test
+cd agents && python green_agent.py --task miniwob.click-test
 ```
 
 ---
@@ -543,7 +541,7 @@ make install-agentbeats
 
 ### 2. Start Server
 ```bash
-python green_evaluator.py --a2a-server --host 0.0.0.0 --port 8000 --card-url http://<EXTERNAL_IP>:8000
+cd agents && python green_agent.py --a2a-server --port 8000 --card-url http://<EXTERNAL_IP>:8000
 ```
 
 ### 3. Register
@@ -560,7 +558,11 @@ The green agent exposes endpoints for remote white agent evaluation via A2A prot
 
 ```
 BrowserGym/
-├── green_evaluator.py              # Green agent (evaluator)
+├── agents/
+│   ├── green_agent.py              # Green agent (evaluator)
+│   ├── white_agent.py              # White agent implementation
+│   ├── Dockerfile.green            # Green agent Docker image
+│   └── Dockerfile.white            # White agent Docker image
 ├── green_evaluator_card.json       # Green agent A2A card
 │
 ├── demo_agent/

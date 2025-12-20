@@ -5,7 +5,7 @@ import tempfile
 import time
 from unittest.mock import Mock, patch
 
-from agents.green_evaluator import GreenEvaluator, get_miniwob_task_list, get_workarena_task_list, get_webarena_task_list
+from agents.green_agent import GreenEvaluator, get_miniwob_task_list, get_workarena_task_list, get_webarena_task_list
 from browsergym.experiments.agent import Agent
 from browsergym.core.action.highlevel import HighLevelActionSet
 
@@ -388,19 +388,22 @@ class TestTaskLists:
 
 
 class TestA2AServer:
-    @pytest.mark.skipif(not __import__('green_evaluator').A2A_AVAILABLE, reason="A2A dependencies not available")
-    def test_agent_card_endpoint(self, evaluator):
-        from agents.green_evaluator import A2AServer
-        from fastapi.testclient import TestClient
+    def test_agent_card_endpoint(self):
+        try:
+            from agents.green_agent import create_a2a_app
+            from fastapi.testclient import TestClient
+        except ImportError:
+            pytest.skip("A2A dependencies not available")
         
-        server = A2AServer(evaluator, card_url="http://localhost:8000")
-        client = TestClient(server.app)
+        app = create_a2a_app(card_url="http://localhost:8000")
+        client = TestClient(app)
         
-        response = client.get("/card")
+        response = client.get("/.well-known/agent-card.json")
         assert response.status_code == 200
         data = response.json()
         assert "name" in data
+        assert data["name"] == "BrowserGym Green Evaluator"
         assert "capabilities" in data
-        assert "miniwob_benchmark" in data["capabilities"]
-        assert "workarena_benchmark" in data["capabilities"]
-        assert "webarena_benchmark" in data["capabilities"]
+        assert "miniwob_evaluation" in data["capabilities"]
+        assert "workarena_evaluation" in data["capabilities"]
+        assert "webarena_evaluation" in data["capabilities"]

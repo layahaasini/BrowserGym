@@ -24,7 +24,7 @@ RUN python -m playwright install-deps chromium || true
 
 # Copy application code
 COPY --chown=agentbeats:agentbeats browsergym ./browsergym
-COPY --chown=agentbeats:agentbeats green_evaluator.py .
+COPY --chown=agentbeats:agentbeats agents/green_agent.py .
 COPY --chown=agentbeats:agentbeats pyproject.toml .
 
 # Set environment
@@ -34,5 +34,5 @@ ENV DISPLAY=:99
 
 EXPOSE 8000
 
-ENTRYPOINT ["python", "green_evaluator.py", "--a2a-server"]
+ENTRYPOINT ["python", "green_agent.py", "--a2a-server"]
 CMD ["--host", "0.0.0.0", "--port", "8000"]
