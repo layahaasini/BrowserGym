@@ -223,14 +223,29 @@ def create_a2a_app(agent: WhiteAgent, card_url: str) -> FastAPI:
     @app.get("/.well-known/agent-card.json")
     async def get_agent_card():
         return {
+            "protocolVersion": "0.3.0",
+            "preferredTransport": "JSONRPC",
+            "capabilities": {
+                "streaming": False
+            },
+            "defaultInputModes": ["text"],
+            "defaultOutputModes": ["text"],
             "name": "BrowserGym White Agent",
-            "description": "Web automation agent with GPT-4o-mini for browser tasks",
+            "description": "Web automation agent powered by GPT-4o-mini for browser-based task completion",
             "url": card_url,
+            "version": "1.0.0",
             "skills": [{
-                "name": "web_automation",
-                "description": "Automate web browser interactions for tasks"
-            }],
-            "capabilities": ["miniwob_benchmark", "workarena_benchmark", "webarena_benchmark"]
+                "id": "web_automation",
+                "name": "Web Browser Automation",
+                "description": "Complete web-based tasks through browser automation including navigation, clicking, form filling, and information extraction",
+                "examples": [
+                    "Navigate to website and click specified element",
+                    "Fill out forms with provided information",
+                    "Extract information from web pages",
+                    "Complete multi-step web workflows"
+                ],
+                "tags": ["white agent", "web automation", "browser tasks", "gpt-4o-mini"]
+            }]
         }
 
     @app.get("/")

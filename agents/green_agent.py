@@ -46,20 +46,29 @@ def create_a2a_app(card_url: str) -> FastAPI:
     @app.get("/.well-known/agent-card.json")
     async def get_agent_card():
         return {
+            "protocolVersion": "0.3.0",
+            "preferredTransport": "JSONRPC",
+            "capabilities": {
+                "streaming": False
+            },
+            "defaultInputModes": ["text"],
+            "defaultOutputModes": ["text"],
             "name": "BrowserGym Green Evaluator",
-            "description": "Green agent that evaluates white agents on BrowserGym benchmarks",
+            "description": "Assessment hosting agent for BrowserGym web automation benchmarks",
             "url": card_url,
-            "role": "green_agent",
+            "version": "1.0.0",
             "skills": [{
-                "name": "benchmark_evaluation",
-                "description": "Evaluate agents on web automation benchmarks"
-            }],
-            "capabilities": [
-                "miniwob_evaluation",
-                "workarena_evaluation", 
-                "webarena_evaluation",
-                "assessment_orchestration"
-            ]
+                "id": "host_assess_browsergym",
+                "name": "BrowserGym Assessment Hosting",
+                "description": "Evaluate white agents on web automation benchmarks including MiniWoB, WebArena, WorkArena, and VisualWebArena",
+                "examples": [
+                    "Assess agent on miniwob.click-test with max 50 steps",
+                    "Evaluate agent on webarena task with shopping environment",
+                    "Run WorkArena ServiceNow task evaluation",
+                    "Test agent on VisualWebArena visual reasoning tasks"
+                ],
+                "tags": ["green agent", "assessment hosting", "browsergym", "web automation"]
+            }]
         }
 
     @app.get("/")
