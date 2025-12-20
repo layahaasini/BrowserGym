@@ -74,6 +74,32 @@ def create_a2a_app(card_url: str) -> FastAPI:
     async def status():
         return {"status": "ok"}
 
+    @app.get("/info")
+    async def info():
+        return {
+            "name": "BrowserGym Green Evaluator",
+            "version": "1.0.0",
+            "type": "green_agent",
+            "role": "assessor",
+            "description": "Green agent that evaluates white agents on BrowserGym benchmarks",
+            "capabilities": [
+                "miniwob_evaluation",
+                "workarena_evaluation",
+                "webarena_evaluation",
+                "assessment_orchestration"
+            ],
+            "url": card_url,
+            "endpoints": {
+                "agent_card": "/.well-known/agent-card.json",
+                "send_message": "/sendMessage",
+                "send_message_stream": "/sendMessageStream",
+                "get_task": "/getTask",
+                "cancel_task": "/cancelTask",
+                "status": "/status",
+                "health": "/health"
+            }
+        }
+
     @app.post("/sendMessage")
     async def send_message(request: SendMessageRequest):
         try:
