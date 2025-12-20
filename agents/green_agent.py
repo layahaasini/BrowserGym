@@ -1,9 +1,10 @@
 import argparse
-import uuid
 import asyncio
+import json
+import uuid
 from typing import Dict, Any, Optional
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 import uvicorn
 from pydantic import BaseModel
 
@@ -11,71 +12,20 @@ from white_agent import WhiteAgentArgs
 from browsergym.experiments import EnvArgs, ExpArgs, get_exp_result
 
 
-def str2bool(v):
-    if isinstance(v, bool):
-        return v
-    if v.lower() in ("yes", "true", "t", "y", "1"):
-        return True
-    elif v.lower() in ("no", "false", "f", "n", "0"):
-        return False
-    else:
-        raise argparse.ArgumentTypeError("Boolean value expected.")
-
-
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run experiment with hyperparameters.")
-    parser.add_argument("--model_name", type=str, default="gpt-4o-mini", help="OpenAI model name.")
-    parser.add_argument("--task_name", type=str, default="openended", help="Name of the Browsergym task to run. If 'openended', you need to specify a 'start_url'")
-    parser.add_argument("--start_url", type=str, default="https://www.google.com", help="Starting URL (only for the openended task).")
-    parser.add_argument("--visual_effects", type=str2bool, default=True, help="Add visual effects when the agents performs actions.")
-    parser.add_argument("--use_html", type=str2bool, default=False, help="Use HTML in the agent's observation space.")
-    parser.add_argument("--use_axtree", type=str2bool, default=True, help="Use AXTree in the agent's observation space.")
-    parser.add_argument("--use_screenshot", type=str2bool, default=False, help="Use screenshot in the agent's observation space.")
+    parser = argparse.ArgumentParser(description="BrowserGym Green Evaluator")
     parser.add_argument("--a2a-server", action="store_true", help="Run as A2A server")
     parser.add_argument("--port", type=int, default=8000, help="Port for A2A server")
     parser.add_argument("--card-url", type=str, default=None, help="Public URL for agent card")
-
+    parser.add_argument("--task", type=str, default=None, help="Task to run (e.g., miniwob.click-test)")
+    parser.add_argument("--max_steps", type=int, default=50, help="Maximum steps per task")
+    parser.add_argument("--model_name", type=str, default="gpt-4o-mini", help="Model name for agent")
     return parser.parse_args()
 
 
-def main():
-    args = parse_args()
-
-    agent_args = WhiteAgentArgs(
-        model_name=args.model_name,
-        chat_mode=False,
-        demo_mode="default" if args.visual_effects else "off",
-        use_html=args.use_html,
-        use_axtree=args.use_axtree,
-        use_screenshot=args.use_screenshot,
-    )
-
-    env_args = EnvArgs(
-        task_name=args.task_name,
-        task_seed=None,
-        max_steps=50,
-        headless=False,
-    )
-
-    if args.task_name == "openended":
-        agent_args.chat_mode = True
-        env_args.wait_for_user_message = True
-        env_args.task_kwargs = {"start_url": args.start_url}
-
-    exp_args = ExpArgs(env_args=env_args, agent_args=agent_args)
-    exp_args.prepare("./results")
-    exp_args.run()
-
-    exp_result = get_exp_result(exp_args.exp_dir)
-    exp_record = exp_result.get_exp_record()
-
-    for key, val in exp_record.items():
-        print(f"{key}: {val}")
-
-
-class AssessmentRequest(BaseModel):
-    participants: Dict[str, str]
-    config: Dict[str, Any] = {}
+class SendMessageRequest(BaseModel):
+    message: Dict[str, Any]
+    context: Optional[Dict[str, Any]] = None
 
 
 def create_a2a_app(card_url: str) -> FastAPI:
@@ -87,14 +37,19 @@ def create_a2a_app(card_url: str) -> FastAPI:
     async def get_agent_card():
         return {
             "name": "BrowserGym Green Evaluator",
-            "description": "Evaluates web automation agents on BrowserGym benchmarks",
+            "description": "Green agent that evaluates white agents on BrowserGym benchmarks",
             "url": card_url,
-            "role": "evaluator",
+            "role": "green_agent",
             "skills": [{
-                "name": "agent_evaluation",
-                "description": "Evaluate agent performance on web tasks"
+                "name": "benchmark_evaluation",
+                "description": "Evaluate agents on web automation benchmarks"
             }],
-            "benchmarks": ["miniwob", "workarena", "webarena", "visualwebarena"]
+            "capabilities": [
+                "miniwob_evaluation",
+                "workarena_evaluation", 
+                "webarena_evaluation",
+                "assessment_orchestration"
+            ]
         }
 
     @app.get("/")
@@ -105,53 +60,139 @@ def create_a2a_app(card_url: str) -> FastAPI:
     async def health():
         return {"status": "healthy"}
 
-    @app.post("/assessment/request")
-    async def handle_assessment(request: Request):
+    @app.post("/sendMessage")
+    async def send_message(request: SendMessageRequest):
         try:
-            body = await request.json()
             task_id = str(uuid.uuid4())
+            message = request.message
+            
+            parts = message.get("parts", [])
+            text_content = "".join(
+                part.get("text", "") 
+                for part in parts 
+                if part.get("kind") == "text"
+            )
+            
+            assessment_data = {}
+            try:
+                assessment_data = json.loads(text_content)
+            except:
+                pass
+            
+            participants = assessment_data.get("participants", {})
+            config = assessment_data.get("config", {})
             
             tasks[task_id] = {
                 "id": task_id,
-                "status": "received",
-                "participants": body.get("participants", {}),
-                "config": body.get("config", {}),
-                "results": None
+                "status": "submitted",
+                "participants": participants,
+                "config": config,
+                "artifacts": []
             }
             
-            print(f"Assessment {task_id} received")
+            print(f"Assessment {task_id} received with {len(participants)} participants")
             asyncio.create_task(run_assessment(task_id, tasks))
             
-            return {"task_id": task_id, "status": "started", "message": "Assessment started"}
+            return {
+                "task": {
+                    "id": task_id,
+                    "status": "submitted"
+                }
+            }
         except Exception as e:
             print(f"Error handling assessment: {e}")
             return JSONResponse(status_code=500, content={"error": str(e)})
 
-    @app.get("/assessment/{task_id}")
-    async def get_assessment_status(task_id: str):
+    @app.post("/sendMessageStream")
+    async def send_message_stream(request: SendMessageRequest):
+        try:
+            task_id = str(uuid.uuid4())
+            message = request.message
+            
+            parts = message.get("parts", [])
+            text_content = "".join(
+                part.get("text", "") 
+                for part in parts 
+                if part.get("kind") == "text"
+            )
+            
+            assessment_data = {}
+            try:
+                assessment_data = json.loads(text_content)
+            except:
+                pass
+            
+            participants = assessment_data.get("participants", {})
+            config = assessment_data.get("config", {})
+            
+            tasks[task_id] = {
+                "id": task_id,
+                "status": "submitted",
+                "participants": participants,
+                "config": config,
+                "artifacts": []
+            }
+            
+            async def event_stream():
+                yield f"data: {json.dumps({'task': {'id': task_id, 'status': 'submitted'}})}\n\n"
+                
+                await asyncio.sleep(0.1)
+                tasks[task_id]["status"] = "working"
+                yield f"data: {json.dumps({'task': {'id': task_id, 'status': 'working'}})}\n\n"
+                
+                await run_assessment(task_id, tasks, stream_updates=True)
+                
+                for update in tasks[task_id].get("updates", []):
+                    yield f"data: {json.dumps(update)}\n\n"
+                
+                final_status = tasks[task_id]["status"]
+                yield f"data: {json.dumps({'task': {'id': task_id, 'status': final_status, 'artifacts': tasks[task_id].get('artifacts', [])}})}\n\n"
+            
+            return StreamingResponse(event_stream(), media_type="text/event-stream")
+        except Exception as e:
+            print(f"Error in stream: {e}")
+            return JSONResponse(status_code=500, content={"error": str(e)})
+
+    @app.post("/getTask")
+    async def get_task(request: Request):
+        body = await request.json()
+        task_id = body.get("taskId")
+        
         if task_id not in tasks:
             return JSONResponse(status_code=404, content={"error": "Task not found"})
         
         task = tasks[task_id]
-        return {"task_id": task_id, "status": task["status"], "results": task.get("results")}
+        return {
+            "task": {
+                "id": task_id,
+                "status": task["status"],
+                "artifacts": task.get("artifacts", [])
+            }
+        }
 
-    @app.post("/message/send")
-    async def handle_message(request: Request):
-        try:
-            body = await request.json()
-            print(f"Received A2A message: {body}")
-            return {"status": "received", "message": "Message processed"}
-        except Exception as e:
-            return JSONResponse(status_code=500, content={"error": str(e)})
+    @app.post("/cancelTask")
+    async def cancel_task(request: Request):
+        body = await request.json()
+        task_id = body.get("taskId")
+        
+        if task_id in tasks:
+            tasks[task_id]["status"] = "cancelled"
+            return {"task": {"id": task_id, "status": "cancelled"}}
+        
+        return JSONResponse(status_code=404, content={"error": "Task not found"})
 
     return app
 
 
-async def run_assessment(task_id: str, tasks: dict):
-    """Run assessment using existing BrowserGym functionality."""
+async def run_assessment(task_id: str, tasks: dict, stream_updates: bool = False):
+    """Run assessment using BrowserGym and produce A2A artifacts."""
     try:
         task = tasks[task_id]
-        task["status"] = "running"
+        task["status"] = "working"
+        
+        if stream_updates:
+            task["updates"] = []
+            task["updates"].append({"type": "log", "message": "Starting assessment"})
         
         config = task["config"]
         task_name = config.get("task_name", "miniwob.click-test")
@@ -159,6 +200,9 @@ async def run_assessment(task_id: str, tasks: dict):
         model_name = config.get("model_name", "gpt-4o-mini")
         
         print(f"Running assessment {task_id} on {task_name}")
+        
+        if stream_updates:
+            task["updates"].append({"type": "log", "message": f"Evaluating on task: {task_name}"})
         
         agent_args = WhiteAgentArgs(
             model_name=model_name,
@@ -178,6 +222,10 @@ async def run_assessment(task_id: str, tasks: dict):
         
         exp_args = ExpArgs(env_args=env_args, agent_args=agent_args)
         exp_args.prepare(f"./results/a2a_{task_id}")
+        
+        if stream_updates:
+            task["updates"].append({"type": "log", "message": "Running white agent on benchmark"})
+        
         exp_args.run()
         
         exp_result = get_exp_result(exp_args.exp_dir)
@@ -193,15 +241,76 @@ async def run_assessment(task_id: str, tasks: dict):
             "details": exp_record
         }
         
-        task["status"] = "completed"
-        task["results"] = results
+        artifacts = [{
+            "name": "assessment_results",
+            "mimeType": "application/json",
+            "data": results
+        }]
         
-        print(f"Assessment {task_id} completed: {results}")
+        task["status"] = "completed"
+        task["artifacts"] = artifacts
+        
+        if stream_updates:
+            task["updates"].append({
+                "type": "artifact",
+                "artifact": artifacts[0]
+            })
+        
+        print(f"Assessment {task_id} completed: Success={results['success']}, Reward={results['reward']}")
         
     except Exception as e:
         print(f"Assessment {task_id} failed: {e}")
         task["status"] = "failed"
-        task["results"] = {"error": str(e), "task_name": config.get("task_name", "unknown")}
+        task["artifacts"] = [{
+            "name": "error",
+            "mimeType": "application/json",
+            "data": {"error": str(e), "task_name": config.get("task_name", "unknown")}
+        }]
+
+
+def main():
+    args = parse_args()
+
+    agent_args = WhiteAgentArgs(
+        model_name=args.model_name,
+        chat_mode=False,
+        demo_mode="off",
+        use_html=False,
+        use_axtree=True,
+        use_screenshot=False,
+    )
+
+    if args.task:
+        from browsergym.core.env import BrowserEnv
+        
+        env = BrowserEnv(
+            task_name=args.task,
+            headless=True,
+            action_mapping=agent_args.make_agent().action_set.to_python_code,
+        )
+
+        agent = agent_args.make_agent()
+        obs, info = env.reset()
+
+        for step in range(args.max_steps):
+            action_str, action_meta = agent.get_action(obs)
+            print(f"\nStep {step+1}: {action_str}")
+
+            obs, reward, terminated, truncated, info = env.step(action_str)
+
+            if terminated or truncated:
+                print(f"\nTask {'succeeded' if reward > 0 else 'failed'} after {step+1} steps")
+                break
+
+        env.close()
+    else:
+        env_args = EnvArgs(task_name="miniwob.click-test", max_steps=args.max_steps)
+        exp_args = ExpArgs(env_args=env_args, agent_args=agent_args)
+        exp_args.prepare("./results/green_eval")
+        exp_args.run()
+        
+        exp_result = get_exp_result(exp_args.exp_dir)
+        print(f"\nEvaluation complete: {exp_result.get_exp_record()}")
 
 
 if __name__ == "__main__":
@@ -214,10 +323,10 @@ if __name__ == "__main__":
         card_url = args.card_url or f"http://localhost:{args.port}"
         app = create_a2a_app(card_url)
         
-        print(f"Starting BrowserGym Green Evaluator")
+        print(f"Starting BrowserGym Green Evaluator (A2A Protocol)")
         print(f"Server: {card_url}")
         print(f"Agent Card: {card_url}/.well-known/agent-card.json")
-        print(f"Assessment endpoint: {card_url}/assessment/request")
+        print(f"Send assessment requests to: {card_url}/sendMessage")
         
         uvicorn.run(app, host="0.0.0.0", port=args.port)
     else:

@@ -9,7 +9,7 @@ import numpy as np
 import openai
 from PIL import Image
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 import uvicorn
 from pydantic import BaseModel
 
@@ -200,13 +200,8 @@ class WhiteAgentArgs(AbstractAgentArgs):
         )
 
 
-class A2AMessage(BaseModel):
-    role: str
-    parts: List[Dict[str, Any]]
-
-
-class A2AMessageRequest(BaseModel):
-    message: A2AMessage
+class SendMessageRequest(BaseModel):
+    message: Dict[str, Any]
     context: Optional[Dict[str, Any]] = None
 
 
@@ -225,11 +220,7 @@ def create_a2a_app(agent: WhiteAgent, card_url: str) -> FastAPI:
                 "name": "web_automation",
                 "description": "Automate web browser interactions for tasks"
             }],
-            "capabilities": [
-                "miniwob_benchmark",
-                "workarena_benchmark",
-                "webarena_benchmark"
-            ]
+            "capabilities": ["miniwob_benchmark", "workarena_benchmark", "webarena_benchmark"]
         }
 
     @app.get("/")
@@ -240,54 +231,85 @@ def create_a2a_app(agent: WhiteAgent, card_url: str) -> FastAPI:
     async def health():
         return {"status": "healthy"}
 
-    @app.post("/message/send")
-    async def send_message(request: A2AMessageRequest):
+    @app.post("/sendMessage")
+    async def send_message(request: SendMessageRequest):
         try:
             task_id = str(uuid.uuid4())
-            text_content = "".join(part.get("text", "") for part in request.message.parts if part.get("kind") == "text")
+            message = request.message
+            
+            text_content = ""
+            if "parts" in message:
+                text_content = "".join(
+                    part.get("text", "") 
+                    for part in message["parts"] 
+                    if part.get("kind") == "text"
+                )
             
             tasks[task_id] = {
                 "id": task_id,
-                "status": "received",
+                "status": "submitted",
                 "message": text_content,
-                "result": None
+                "artifacts": []
             }
             
-            logger.info(f"Received A2A message for task {task_id}: {text_content}")
+            logger.info(f"Received A2A message for task {task_id}")
             
-            return {"task_id": task_id, "status": "received", "message": "Task received and queued"}
+            return {
+                "task": {
+                    "id": task_id,
+                    "status": "submitted"
+                }
+            }
         except Exception as e:
             logger.error(f"Error handling A2A message: {e}")
             return JSONResponse(status_code=500, content={"error": str(e)})
 
-    @app.post("/message/stream")
-    async def stream_message(request: A2AMessageRequest):
-        return await send_message(request)
+    @app.post("/sendMessageStream")
+    async def send_message_stream(request: SendMessageRequest):
+        try:
+            task_id = str(uuid.uuid4())
+            
+            async def event_stream():
+                import json
+                yield f"data: {json.dumps({'task': {'id': task_id, 'status': 'submitted'}})}\n\n"
+                yield f"data: {json.dumps({'task': {'id': task_id, 'status': 'working'}})}\n\n"
+                yield f"data: {json.dumps({'task': {'id': task_id, 'status': 'completed'}})}\n\n"
+            
+            return StreamingResponse(event_stream(), media_type="text/event-stream")
+        except Exception as e:
+            logger.error(f"Error in stream: {e}")
+            return JSONResponse(status_code=500, content={"error": str(e)})
 
-    @app.post("/task/get")
+    @app.post("/getTask")
     async def get_task(request: Request):
         try:
             body = await request.json()
-            task_id = body.get("task_id")
+            task_id = body.get("taskId")
             
             if task_id not in tasks:
                 return JSONResponse(status_code=404, content={"error": "Task not found"})
             
             task = tasks[task_id]
-            return {"task_id": task_id, "status": task["status"], "result": task.get("result")}
+            return {
+                "task": {
+                    "id": task_id,
+                    "status": task["status"],
+                    "artifacts": task.get("artifacts", [])
+                }
+            }
         except Exception as e:
             logger.error(f"Error getting task: {e}")
             return JSONResponse(status_code=500, content={"error": str(e)})
 
-    @app.post("/task/cancel")
+    @app.post("/cancelTask")
     async def cancel_task(request: Request):
         try:
             body = await request.json()
-            task_id = body.get("task_id")
+            task_id = body.get("taskId")
             
             if task_id in tasks:
                 tasks[task_id]["status"] = "cancelled"
-                return {"task_id": task_id, "status": "cancelled"}
+                return {"task": {"id": task_id, "status": "cancelled"}}
             
             return JSONResponse(status_code=404, content={"error": "Task not found"})
         except Exception as e:
@@ -319,7 +341,7 @@ if __name__ == "__main__":
         card_url = args.card_url or f"http://{args.host}:{args.port}"
         app = create_a2a_app(agent, card_url)
         
-        print(f"Starting BrowserGym White Agent")
+        print(f"Starting BrowserGym White Agent (A2A Protocol)")
         print(f"Server: {card_url}")
         print(f"Agent Card: {card_url}/.well-known/agent-card.json")
         
