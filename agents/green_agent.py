@@ -359,9 +359,9 @@ def main():
         env_args = EnvArgs(task_name="miniwob.click-test", max_steps=args.max_steps)
         exp_args = ExpArgs(env_args=env_args, agent_args=agent_args)
         exp_args.prepare("./results/green_eval")
-    exp_args.run()
-
-    exp_result = get_exp_result(exp_args.exp_dir)
+        exp_args.run()
+        
+        exp_result = get_exp_result(exp_args.exp_dir)
         print(f"\nEvaluation complete: {exp_result.get_exp_record()}")
 
 
