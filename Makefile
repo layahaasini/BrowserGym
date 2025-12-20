@@ -182,11 +182,11 @@ install-bm-miniwob:
 
 containerize-agents:
 	@echo "--- Putting green and white agent into docker containers ---"
-	@docker build --platform linux/amd64 -t $${GHCR_GREEN_IMAGE}:v1.0 -f agents/Dockerfile.green . || { echo "❌ Green agent build failed"; exit 1; }
-	@docker build --platform linux/amd64 -t $${GHCR_WHITE_IMAGE}:v1.0 -f agents/Dockerfile.white . || { echo "❌ White agent build failed"; exit 1; }
-	@echo "$${GITHUB_TOKEN}" | docker login ghcr.io -u $${GITHUB_USERNAME} --password-stdin || { echo "❌ Login failed"; exit 1; }
-	@docker push $${GHCR_GREEN_IMAGE}:v1.0 || { echo "❌ Push failed"; exit 1; }
-	@docker push $${GHCR_WHITE_IMAGE}:v1.0 || { echo "❌ Push failed"; exit 1; }
+	@docker build --platform linux/amd64 -t $${GHCR_GREEN_IMAGE} -f agents/Dockerfile.green .
+	@docker build --platform linux/amd64 -t $${GHCR_WHITE_IMAGE} -f agents/Dockerfile.white .
+	@echo "$${GITHUB_TOKEN}" | docker login ghcr.io -u $${GITHUB_USERNAME} --password-stdin
+	@docker push $${GHCR_GREEN_IMAGE}
+	@docker push $${GHCR_WHITE_IMAGE}
 	@echo "Docker containers setup complete."
 
 demo:
@@ -208,54 +208,54 @@ demo:
 			done; \
 		fi
 
-# demo-bm-webarena:
-# 	make demo TASKS="webarena.4"
+demo-bm-webarena:
+	make demo TASKS="webarena.4"
 
-# demo-bm-visualwebarena:
-# 	make demo TASKS="visualwebarena.398"
+demo-bm-visualwebarena:
+	make demo TASKS="visualwebarena.398"
 
-# demo-bm-workarena:
-# 	make demo TASKS="workarena.servicenow.order-standard-laptop"
+demo-bm-workarena:
+	make demo TASKS="workarena.servicenow.order-standard-laptop"
 
-# demo-bm-miniwob:
-# 	make demo TASKS="miniwob.click-test"
+demo-bm-miniwob:
+	make demo TASKS="miniwob.click-test"
 
-# demo-bm-assistantbench:
-# 	make demo TASKS="assistantbench.validation.3"
+demo-bm-assistantbench:
+	make demo TASKS="assistantbench.validation.3"
 
-# demo-bm-weblinx:
-# 	make demo TASKS="weblinx.klatidn.1"
+demo-bm-weblinx:
+	make demo TASKS="weblinx.klatidn.1"
 
-# GREEN_AGENT_PATH ?= demo_agent/agent.py
-# GREEN_MAX_STEPS ?= 50
+GREEN_AGENT_PATH ?= demo_agent/agent.py
+GREEN_MAX_STEPS ?= 50
 
-# green-workarena:
-# 	@if [ -z "$(TASK)" ]; then \
-# 		echo "Please provide TASK=workarena.servicenow.<task-name>"; \
-# 		exit 1; \
-# 	fi
-# 	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
-# 	@echo "--- Running Green Evaluator on WorkArena task: $(TASK) ---"
-# 	. .env && \
-# 	$(PY) green_evaluator.py \
-# 		--agent_path $(GREEN_AGENT_PATH) \
-# 		--task $(TASK) \
-# 		--max_steps $(GREEN_MAX_STEPS)
+green-workarena:
+	@if [ -z "$(TASK)" ]; then \
+		echo "Please provide TASK=workarena.servicenow.<task-name>"; \
+		exit 1; \
+	fi
+	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
+	@echo "--- Running Green Evaluator on WorkArena task: $(TASK) ---"
+	. .env && \
+	$(PY) green_evaluator.py \
+		--agent_path $(GREEN_AGENT_PATH) \
+		--task $(TASK) \
+		--max_steps $(GREEN_MAX_STEPS)
 
-# green-webarena:
-# 	@if [ -z "$(TASK)" ]; then \
-# 		echo "Please provide TASK=webarena.<task-id> (e.g., TASK=webarena.4)"; \
-# 		exit 1; \
-# 	fi
-# 	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
-# 	@echo "--- Running Green Evaluator on WebArena task: $(TASK) ---"
-# 	@echo "Note: WebArena requires Docker containers running on your GCP VM"
-# 	@echo "Make sure WA_* environment variables are set in .env pointing to your VM"
-# 	. .env && \
-# 	$(PY) green_evaluator.py \
-# 		--agent_path $(GREEN_AGENT_PATH) \
-# 		--task $(TASK) \
-# 		--max_steps $(GREEN_MAX_STEPS)
+green-webarena:
+	@if [ -z "$(TASK)" ]; then \
+		echo "Please provide TASK=webarena.<task-id> (e.g., TASK=webarena.4)"; \
+		exit 1; \
+	fi
+	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
+	@echo "--- Running Green Evaluator on WebArena task: $(TASK) ---"
+	@echo "Note: WebArena requires Docker containers running on your GCP VM"
+	@echo "Make sure WA_* environment variables are set in .env pointing to your VM"
+	. .env && \
+	$(PY) green_evaluator.py \
+		--agent_path $(GREEN_AGENT_PATH) \
+		--task $(TASK) \
+		--max_steps $(GREEN_MAX_STEPS)
 
 test-core:
 	@echo "--- Running core tests ---"
@@ -311,14 +311,14 @@ help:
 	@echo "  install-bm-webarena              - Install and configure WebArena"
 	@echo "  install-bm-visualwebarena        - Install VisualWebArena (Classifieds)"
 	@echo "  demo                             - Run demo agent"
-# 	@echo "  demo-bm-miniwob                  - Run MiniWoB++ demo"
-# 	@echo "  demo-bm-webarena                 - Run WebArena demo"
-# 	@echo "  demo-bm-visualwebarena           - Run VisualWebArena demo"
-# 	@echo "  demo-bm-workarena                - Run WorkArena demo"
-# 	@echo "  demo-bm-assistantbench           - Run AssistantBench demo"
-# 	@echo "  demo-bm-weblinx                  - Run WebLinx demo"
-# 	@echo "  green-workarena                  - Run Green Evaluator on a WorkArena task (TASK=...)"
-# 	@echo "  green-webarena                   - Run Green Evaluator on a WebArena task (TASK=...)"
+	@echo "  demo-bm-miniwob                  - Run MiniWoB++ demo"
+	@echo "  demo-bm-webarena                 - Run WebArena demo"
+	@echo "  demo-bm-visualwebarena           - Run VisualWebArena demo"
+	@echo "  demo-bm-workarena                - Run WorkArena demo"
+	@echo "  demo-bm-assistantbench           - Run AssistantBench demo"
+	@echo "  demo-bm-weblinx                  - Run WebLinx demo"
+	@echo "  green-workarena                  - Run Green Evaluator on a WorkArena task (TASK=...)"
+	@echo "  green-webarena                   - Run Green Evaluator on a WebArena task (TASK=...)"
 	@echo "  test-core                        - Run core tests"
 	@echo "  test-green                       - Run Green Evaluator tests"
 	@echo "  test-benchmarks                  - Run tests for installed benchmarks only"
