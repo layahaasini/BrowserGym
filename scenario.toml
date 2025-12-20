@@ -1,0 +1,32 @@
+[green_agent]
+image = "ghcr.io/${GITHUB_USERNAME}/browsergym-green-evaluator:v1.0"
+env = {
+  MINIWOB_URL = "${MINIWOB_URL}",
+  WA_SHOPPING = "${WA_SHOPPING}",
+  WA_SHOPPING_ADMIN = "${WA_SHOPPING_ADMIN}",
+  WA_REDDIT = "${WA_REDDIT}",
+  WA_GITLAB = "${WA_GITLAB}",
+  WA_MAP = "${WA_MAP}",
+  WA_WIKIPEDIA = "${WA_WIKIPEDIA}",
+  WA_HOMEPAGE = "${WA_HOMEPAGE}",
+  VWA_CLASSIFIEDS = "${VWA_CLASSIFIEDS}",
+  VWA_CLASSIFIEDS_RESET_TOKEN = "${VWA_CLASSIFIEDS_RESET_TOKEN}",
+  VWA_SHOPPING = "${VWA_SHOPPING}",
+  VWA_REDDIT = "${VWA_REDDIT}",
+  VWA_WIKIPEDIA = "${VWA_WIKIPEDIA}",
+  VWA_HOMEPAGE = "${VWA_HOMEPAGE}",
+  DATASET = "${DATASET}",
+  SNOW_INSTANCE_URL = "${SNOW_INSTANCE_URL}",
+  SNOW_INSTANCE_UNAME = "${SNOW_INSTANCE_UNAME}",
+  SNOW_INSTANCE_PWD = "${SNOW_INSTANCE_PWD}"
+}
+
+[[participants]]
+agentbeats_id = ""
+name = "white_agent"
+image = ""
+env = { OPENAI_API_KEY = "${OPENAI_API_KEY}" }
+
+[config]
+task_name = "miniwob.click-test"
+max_steps = 50
