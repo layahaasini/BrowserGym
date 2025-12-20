@@ -231,6 +231,10 @@ def create_a2a_app(agent: WhiteAgent, card_url: str) -> FastAPI:
     async def health():
         return {"status": "healthy"}
 
+    @app.get("/status")
+    async def status():
+        return {"status": "ok"}
+
     @app.post("/sendMessage")
     async def send_message(request: SendMessageRequest):
         try:

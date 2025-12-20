@@ -28,8 +28,8 @@ pip install fastapi uvicorn
 **Terminal 1** - Start your agent (without tunnel URL first):
 
 ```bash
-cd /Users/layahaasini/Desktop/projects/BrowserGym
-python3 green_evaluator.py --a2a-server --host 127.0.0.1 --port 8000
+cd /Users/layahaasini/Desktop/projects/BrowserGym/agents
+python3 green_agent.py --a2a-server --host 127.0.0.1 --port 8000
 ```
 
 You should see:
@@ -67,7 +67,7 @@ You'll see output like:
 Go back to **Terminal 1**, stop the server (Ctrl+C), then restart with the tunnel URL:
 
 ```bash
-python3 green_evaluator.py --a2a-server \
+python3 green_agent.py --a2a-server \
     --host 127.0.0.1 \
     --port 8000 \
     --card-url https://abc-123-def-456.trycloudflare.com
@@ -217,8 +217,8 @@ Once registered, you can:
 ## Quick Reference Commands
 
 ```bash
-# Start agent
-python3 green_evaluator.py --a2a-server --host 127.0.0.1 --port 8000 --card-url YOUR_TUNNEL_URL
+# Start agent (from agents/ directory)
+cd agents && python3 green_agent.py --a2a-server --host 127.0.0.1 --port 8000 --card-url YOUR_TUNNEL_URL
 
 # Start tunnel
 cloudflared tunnel --url http://127.0.0.1:8000
