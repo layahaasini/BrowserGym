@@ -1,11 +1,28 @@
 {
-  "name": "BrowserGym Green Evaluator",
-  "description": "A green agent that evaluates web agents on BrowserGym benchmarks including MiniWoB, WorkArena, and WebArena",
-  "url": "http://34.148.1.181:8000",
-  "capabilities": [
-    "miniwob_benchmark",
-    "workarena_benchmark",
-    "webarena_benchmark",
-    "agent_evaluation"
-  ]
+	  "name": "Benchwarmer_BrowserGym",
+	  "description": "Green evaluator for BrowserGym benchmarks",
+	  "version": "0.1.0",
+	  "url": "http://0.0.0.0:8000",
+	  "capabilities": {
+		  "agent_evaluation": true
+	  },
+	  "defaultInputModes": ["a2a"],
+      	  "defaultOutputModes": ["a2a"],
+	  "skills": [
+		  {
+  			  "id": "browser_evaluation",
+    			  "name": "browser_evaluation",
+			  "description": "Evaluate browser-based agent behavior",
+			  "tags": ["browser", "evaluation"]
+		  }
+	  ],
+	  "server": {
+		  "host": "0.0.0.0",
+		  "port": 8001
+	  },
+	  "launcher": {
+		  "host": "0.0.0.0",
+		  "port": 8000
+	  }
 }
+
