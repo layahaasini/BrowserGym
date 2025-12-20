@@ -10,6 +10,7 @@ import openai
 from PIL import Image
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from pydantic import BaseModel
 
@@ -208,6 +209,15 @@ class SendMessageRequest(BaseModel):
 def create_a2a_app(agent: WhiteAgent, card_url: str) -> FastAPI:
     """Create FastAPI app with A2A protocol endpoints for the white agent."""
     app = FastAPI(title="BrowserGym White Agent", version="1.0.0")
+    
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
     tasks = {}
 
     @app.get("/.well-known/agent-card.json")
