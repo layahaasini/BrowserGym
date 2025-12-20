@@ -180,15 +180,6 @@ install-bm-miniwob:
 	@printf "\n# Benchmark 4: MiniWoB++\nMINIWOB_URL=\"file://\$${PWD}/miniwob-plusplus/miniwob/html/miniwob/\"" >> .env
 	@echo "MiniWob++ setup complete."
 
-containerize-agents:
-	@echo "--- Putting green and white agent into docker containers ---"
-	@docker build --platform linux/amd64 -t $${GHCR_GREEN_IMAGE} -f agents/Dockerfile.green .
-	@docker build --platform linux/amd64 -t $${GHCR_WHITE_IMAGE} -f agents/Dockerfile.white .
-	@echo "$${GITHUB_TOKEN}" | docker login ghcr.io -u $${GITHUB_USERNAME} --password-stdin
-	@docker push $${GHCR_GREEN_IMAGE}
-	@docker push $${GHCR_WHITE_IMAGE}
-	@echo "Docker containers setup complete."
-
 demo:
 	@echo "--- Running demo agent with tasks ---"
 	@if [ ! -f .env ]; then echo "Error: .env file not found. Please create .env file."; exit 1; fi
