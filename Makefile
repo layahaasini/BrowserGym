@@ -11,7 +11,7 @@ install:
 	@test -f .env || cp sample.env .env
 	@if [ "$$(uname)" = "Linux" ]; then \
 		sudo apt-get update && \
-		sudo apt-get install -y wget zip unzip xvfb libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libatspi2.0-0 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango-1.0-0 libcairo2 libasound2 python3-pip python3-venv docker-compose && \
+		sudo apt-get install -y wget zip unzip xvfb libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libatspi2.0-0 cloudflared libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango-1.0-0 libcairo2 libasound2 python3.12 python3-pip python3.12-venv python3.12-dev docker-compose && \
 		sudo usermod -aG docker $$USER; \
 	fi
 	@if [ "$$(uname)" = "Darwin" ]; then \
@@ -20,7 +20,7 @@ install:
 		brew install wget zip unzip python docker docker-compose; \
 		echo "Install Docker Desktop manually if not installed."; \
 	fi
-	python3.13 -m venv .gym
+	python3.12 -m venv .gym
 	@$(PIP) install --upgrade pip
 	@$(PIP) install -r requirements.txt
 	@$(PY) -m playwright install chromium
